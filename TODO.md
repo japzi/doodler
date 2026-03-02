@@ -1,6 +1,6 @@
 # Doodler — Feature Tracker
 
-## v0.1 — MVP (Basic Drawing) `current`
+## v0.1 — MVP (Basic Drawing) `done`
 
 - [x] Canvas with pan (middle-click) and zoom (scroll wheel)
 - [x] Freehand pen tool with sketchy rendering (perfect-freehand)
@@ -14,15 +14,18 @@
 - [ ] Pinch-to-zoom gesture support
 - [ ] Zoom +/- controls in UI
 
-## v0.2 — Shapes
+## v0.2 — Shapes `done`
 
-- [ ] Rectangle tool with sketchy rendering (roughjs)
-- [ ] Ellipse/circle tool
-- [ ] Straight line tool
-- [ ] Arrow tool (line with arrowhead)
-- [ ] Consistent sketchy aesthetic across all shape tools
+- [x] Rectangle tool with sketchy rendering (roughjs)
+- [x] Ellipse/circle tool
+- [x] Straight line tool
+- [x] Arrow tool (line with arrowhead)
+- [x] Consistent sketchy aesthetic across all shape tools
+- [x] Live drag preview during shape drawing
+- [x] Keyboard shortcuts (R → rectangle, E → ellipse, L → line, A → arrow)
+- [x] SVG export handles shapes (stroke) alongside pen strokes (fill)
 
-## v0.3 — Text
+## v0.3 — Text `current`
 
 - [ ] Text tool — click to place text on canvas
 - [ ] xkcd-style handwriting font (Humor Sans)

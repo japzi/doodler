@@ -3,10 +3,14 @@ import './Canvas.css'
 import { useStore } from '../../store/useStore'
 import { SceneRenderer } from './SceneRenderer'
 import { ActiveStrokeRenderer } from './ActiveStrokeRenderer'
+import { ActiveShapeRenderer } from './ActiveShapeRenderer'
 import { SelectionOverlay } from './SelectionOverlay'
 import { usePenTool } from '../../tools/usePenTool'
 import { usePointerTool } from '../../tools/usePointerTool'
+import { useShapeTool } from '../../tools/useShapeTool'
 import type { Point } from '../../types/scene'
+
+const shapeTools = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow'])
 
 function screenToScene(clientX: number, clientY: number): Point {
   const { viewport } = useStore.getState()
@@ -25,6 +29,7 @@ export function Canvas() {
 
   const penTool = usePenTool()
   const pointerTool = usePointerTool()
+  const shapeTool = useShapeTool()
 
   const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     // Middle-click to pan
@@ -40,10 +45,12 @@ export function Canvas() {
     const scenePoint = screenToScene(e.clientX, e.clientY)
     if (activeTool === 'pen') {
       penTool.onPointerDown(e, scenePoint)
+    } else if (shapeTools.has(activeTool)) {
+      shapeTool.onPointerDown(e, scenePoint)
     } else {
       pointerTool.onPointerDown(e, scenePoint)
     }
-  }, [activeTool, penTool, pointerTool])
+  }, [activeTool, penTool, pointerTool, shapeTool])
 
   const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     if (isPanning.current) {
@@ -60,10 +67,12 @@ export function Canvas() {
     const scenePoint = screenToScene(e.clientX, e.clientY)
     if (activeTool === 'pen') {
       penTool.onPointerMove(e, scenePoint)
+    } else if (shapeTools.has(activeTool)) {
+      shapeTool.onPointerMove(e, scenePoint)
     } else {
       pointerTool.onPointerMove(e, scenePoint)
     }
-  }, [activeTool, penTool, pointerTool])
+  }, [activeTool, penTool, pointerTool, shapeTool])
 
   const handlePointerUp = useCallback((_e: React.PointerEvent<SVGSVGElement>) => {
     if (isPanning.current) {
@@ -73,10 +82,12 @@ export function Canvas() {
 
     if (activeTool === 'pen') {
       penTool.onPointerUp()
+    } else if (shapeTools.has(activeTool)) {
+      shapeTool.onPointerUp()
     } else {
       pointerTool.onPointerUp()
     }
-  }, [activeTool, penTool, pointerTool])
+  }, [activeTool, penTool, pointerTool, shapeTool])
 
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault()
@@ -116,6 +127,22 @@ export function Canvas() {
         case 'P':
           useStore.getState().setActiveTool('pen')
           break
+        case 'r':
+        case 'R':
+          useStore.getState().setActiveTool('rectangle')
+          break
+        case 'e':
+        case 'E':
+          useStore.getState().setActiveTool('ellipse')
+          break
+        case 'l':
+        case 'L':
+          useStore.getState().setActiveTool('line')
+          break
+        case 'a':
+        case 'A':
+          useStore.getState().setActiveTool('arrow')
+          break
         case 'Delete':
         case 'Backspace': {
           const { selectedIds, deleteObjects } = useStore.getState()
@@ -135,10 +162,12 @@ export function Canvas() {
     e.preventDefault()
   }, [])
 
+  const cursorClass = shapeTools.has(activeTool) ? 'canvas--shape' : `canvas--${activeTool}`
+
   return (
     <svg
       ref={svgRef}
-      className={`canvas canvas--${activeTool}`}
+      className={`canvas ${cursorClass}`}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -147,6 +176,7 @@ export function Canvas() {
       <g transform={`translate(${viewport.offsetX}, ${viewport.offsetY}) scale(${viewport.scale})`}>
         <SceneRenderer />
         <ActiveStrokeRenderer />
+        <ActiveShapeRenderer />
         <SelectionOverlay />
       </g>
     </svg>

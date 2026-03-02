@@ -31,6 +31,11 @@ export function serializeToSvg(objects: SceneObject[]): string {
       const tx = obj.position.x
       const ty = obj.position.y
       const transform = tx !== 0 || ty !== 0 ? ` transform="translate(${tx}, ${ty})"` : ''
+      const isShape = obj.type !== 'pen'
+
+      if (isShape) {
+        return `  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="2"${transform}/>`
+      }
       return `  <path d="${obj.pathData}" fill="${obj.color}"${transform}/>`
     })
     .join('\n')

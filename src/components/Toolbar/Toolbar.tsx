@@ -44,6 +44,46 @@ export function Toolbar() {
 
         <div className="toolbar__divider" />
 
+        <button
+          className={`toolbar__button ${activeTool === 'rectangle' ? 'toolbar__button--active' : ''}`}
+          onClick={() => setActiveTool('rectangle')}
+          title="Rectangle (R)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+          </svg>
+        </button>
+        <button
+          className={`toolbar__button ${activeTool === 'ellipse' ? 'toolbar__button--active' : ''}`}
+          onClick={() => setActiveTool('ellipse')}
+          title="Ellipse (E)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <ellipse cx="12" cy="12" rx="10" ry="8" />
+          </svg>
+        </button>
+        <button
+          className={`toolbar__button ${activeTool === 'line' ? 'toolbar__button--active' : ''}`}
+          onClick={() => setActiveTool('line')}
+          title="Line (L)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="5" y1="19" x2="19" y2="5" />
+          </svg>
+        </button>
+        <button
+          className={`toolbar__button ${activeTool === 'arrow' ? 'toolbar__button--active' : ''}`}
+          onClick={() => setActiveTool('arrow')}
+          title="Arrow (A)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="19" x2="19" y2="5" />
+            <polyline points="10 5 19 5 19 14" />
+          </svg>
+        </button>
+
+        <div className="toolbar__divider" />
+
         <input
           type="color"
           className="toolbar__color-input"

@@ -14,3 +14,7 @@
 .canvas--pointer {
   cursor: default;
 }
+
+.canvas--shape {
+  cursor: crosshair;
+}

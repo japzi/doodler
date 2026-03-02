@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { SceneObject, Point, ViewportTransform, ToolType } from '../types/scene'
+import type { SceneObject, Point, ViewportTransform, ToolType, ShapePreview } from '../types/scene'
 
 interface DoodlerState {
   // Scene
@@ -15,6 +15,7 @@ interface DoodlerState {
 
   // In-progress drawing
   activeStrokePoints: Point[] | null
+  activeShapePreview: ShapePreview | null
 
   // Actions
   addObject: (obj: SceneObject) => void
@@ -25,6 +26,7 @@ interface DoodlerState {
   setStrokeColor: (color: string) => void
   setViewport: (viewport: ViewportTransform) => void
   setActiveStrokePoints: (points: Point[] | null) => void
+  setActiveShapePreview: (preview: ShapePreview | null) => void
 }
 
 export const useStore = create<DoodlerState>((set) => ({
@@ -34,6 +36,7 @@ export const useStore = create<DoodlerState>((set) => ({
   strokeColor: '#000000',
   viewport: { offsetX: 0, offsetY: 0, scale: 1 },
   activeStrokePoints: null,
+  activeShapePreview: null,
 
   addObject: (obj) =>
     set((state) => ({ objects: [...state.objects, obj] })),
@@ -58,4 +61,5 @@ export const useStore = create<DoodlerState>((set) => ({
   setStrokeColor: (color) => set({ strokeColor: color }),
   setViewport: (viewport) => set({ viewport }),
   setActiveStrokePoints: (points) => set({ activeStrokePoints: points }),
+  setActiveShapePreview: (preview) => set({ activeShapePreview: preview }),
 }))
