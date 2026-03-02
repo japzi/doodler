@@ -5,9 +5,12 @@ import { SceneRenderer } from './SceneRenderer'
 import { ActiveStrokeRenderer } from './ActiveStrokeRenderer'
 import { ActiveShapeRenderer } from './ActiveShapeRenderer'
 import { SelectionOverlay } from './SelectionOverlay'
+import { TextInputOverlay } from './TextInputOverlay'
 import { usePenTool } from '../../tools/usePenTool'
 import { usePointerTool } from '../../tools/usePointerTool'
 import { useShapeTool } from '../../tools/useShapeTool'
+import { useTextTool } from '../../tools/useTextTool'
+import { getObjectIdFromEvent } from '../../utils/hitTest'
 import type { Point } from '../../types/scene'
 
 const shapeTools = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow'])
@@ -30,6 +33,7 @@ export function Canvas() {
   const penTool = usePenTool()
   const pointerTool = usePointerTool()
   const shapeTool = useShapeTool()
+  const textTool = useTextTool()
 
   const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     // Middle-click to pan
@@ -45,12 +49,14 @@ export function Canvas() {
     const scenePoint = screenToScene(e.clientX, e.clientY)
     if (activeTool === 'pen') {
       penTool.onPointerDown(e, scenePoint)
+    } else if (activeTool === 'text') {
+      textTool.onPointerDown(e, scenePoint)
     } else if (shapeTools.has(activeTool)) {
       shapeTool.onPointerDown(e, scenePoint)
     } else {
       pointerTool.onPointerDown(e, scenePoint)
     }
-  }, [activeTool, penTool, pointerTool, shapeTool])
+  }, [activeTool, penTool, pointerTool, shapeTool, textTool])
 
   const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     if (isPanning.current) {
@@ -67,12 +73,14 @@ export function Canvas() {
     const scenePoint = screenToScene(e.clientX, e.clientY)
     if (activeTool === 'pen') {
       penTool.onPointerMove(e, scenePoint)
+    } else if (activeTool === 'text') {
+      textTool.onPointerMove()
     } else if (shapeTools.has(activeTool)) {
       shapeTool.onPointerMove(e, scenePoint)
     } else {
       pointerTool.onPointerMove(e, scenePoint)
     }
-  }, [activeTool, penTool, pointerTool, shapeTool])
+  }, [activeTool, penTool, pointerTool, shapeTool, textTool])
 
   const handlePointerUp = useCallback((_e: React.PointerEvent<SVGSVGElement>) => {
     if (isPanning.current) {
@@ -82,12 +90,24 @@ export function Canvas() {
 
     if (activeTool === 'pen') {
       penTool.onPointerUp()
+    } else if (activeTool === 'text') {
+      textTool.onPointerUp()
     } else if (shapeTools.has(activeTool)) {
       shapeTool.onPointerUp()
     } else {
       pointerTool.onPointerUp()
     }
-  }, [activeTool, penTool, pointerTool, shapeTool])
+  }, [activeTool, penTool, pointerTool, shapeTool, textTool])
+
+  const handleDoubleClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    const objectId = getObjectIdFromEvent(e.nativeEvent)
+    if (!objectId) return
+
+    const obj = useStore.getState().objects.find((o) => o.id === objectId)
+    if (obj?.type === 'text') {
+      useStore.getState().setEditingTextId(objectId)
+    }
+  }, [])
 
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault()
@@ -116,7 +136,7 @@ export function Canvas() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
 
       switch (e.key) {
         case 'v':
@@ -143,6 +163,10 @@ export function Canvas() {
         case 'A':
           useStore.getState().setActiveTool('arrow')
           break
+        case 't':
+        case 'T':
+          useStore.getState().setActiveTool('text')
+          break
         case 'Delete':
         case 'Backspace': {
           const { selectedIds, deleteObjects } = useStore.getState()
@@ -162,23 +186,31 @@ export function Canvas() {
     e.preventDefault()
   }, [])
 
-  const cursorClass = shapeTools.has(activeTool) ? 'canvas--shape' : `canvas--${activeTool}`
+  const cursorClass = activeTool === 'text'
+    ? 'canvas--text'
+    : shapeTools.has(activeTool)
+      ? 'canvas--shape'
+      : `canvas--${activeTool}`
 
   return (
-    <svg
-      ref={svgRef}
-      className={`canvas ${cursorClass}`}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onContextMenu={handleContextMenu}
-    >
-      <g transform={`translate(${viewport.offsetX}, ${viewport.offsetY}) scale(${viewport.scale})`}>
-        <SceneRenderer />
-        <ActiveStrokeRenderer />
-        <ActiveShapeRenderer />
-        <SelectionOverlay />
-      </g>
-    </svg>
+    <>
+      <svg
+        ref={svgRef}
+        className={`canvas ${cursorClass}`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+      >
+        <g transform={`translate(${viewport.offsetX}, ${viewport.offsetY}) scale(${viewport.scale})`}>
+          <SceneRenderer />
+          <ActiveStrokeRenderer />
+          <ActiveShapeRenderer />
+          <SelectionOverlay />
+        </g>
+      </svg>
+      <TextInputOverlay />
+    </>
   )
 }

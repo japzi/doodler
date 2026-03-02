@@ -73,7 +73,17 @@ export interface ArrowShape {
   boundingBox: BoundingBox
 }
 
-export type SceneObject = PenStroke | RectangleShape | EllipseShape | LineShape | ArrowShape
+export interface TextObject {
+  type: 'text'
+  id: string
+  text: string
+  fontSize: number
+  color: string
+  position: { x: number; y: number }
+  boundingBox: BoundingBox
+}
+
+export type SceneObject = PenStroke | RectangleShape | EllipseShape | LineShape | ArrowShape | TextObject
 
 export interface ViewportTransform {
   offsetX: number
@@ -81,7 +91,7 @@ export interface ViewportTransform {
   scale: number
 }
 
-export type ToolType = 'pointer' | 'pen' | 'rectangle' | 'ellipse' | 'line' | 'arrow'
+export type ToolType = 'pointer' | 'pen' | 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'text'
 
 export type ShapeToolType = 'rectangle' | 'ellipse' | 'line' | 'arrow'
 

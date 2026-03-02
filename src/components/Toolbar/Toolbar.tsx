@@ -30,6 +30,15 @@ export function Toolbar() {
           </svg>
         </button>
         <button
+          className={`toolbar__button ${activeTool === 'text' ? 'toolbar__button--active' : ''}`}
+          onClick={() => setActiveTool('text')}
+          title="Text (T)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M5 4v3h5.5v12h3V7H19V4z" />
+          </svg>
+        </button>
+        <button
           className={`toolbar__button ${activeTool === 'pen' ? 'toolbar__button--active' : ''}`}
           onClick={() => setActiveTool('pen')}
           title="Pen (P)"

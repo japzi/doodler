@@ -18,3 +18,7 @@
 .canvas--shape {
   cursor: crosshair;
 }
+
+.canvas--text {
+  cursor: text;
+}

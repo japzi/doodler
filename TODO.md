@@ -27,12 +27,13 @@
 
 ## v0.3 — Text `current`
 
-- [ ] Text tool — click to place text on canvas
-- [ ] xkcd-style handwriting font (Humor Sans)
-- [ ] Inline text editing (double-click to edit)
+- [x] Text tool — click to place text on canvas
+- [x] xkcd-style handwriting font (Humor Sans)
+- [x] Inline text editing (double-click to edit)
 - [ ] Font size control
-- [ ] Text color (stroke and fill)
-- [ ] Font embedding / text-to-path on SVG export
+- [x] Text color (uses stroke color)
+- [x] Font embedding on SVG export
+- [x] Keyboard shortcut (T → text)
 
 ## v0.4 — Icon Library
 
