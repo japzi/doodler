@@ -1,0 +1,154 @@
+import { useCallback, useEffect, useRef } from 'react'
+import './Canvas.css'
+import { useStore } from '../../store/useStore'
+import { SceneRenderer } from './SceneRenderer'
+import { ActiveStrokeRenderer } from './ActiveStrokeRenderer'
+import { SelectionOverlay } from './SelectionOverlay'
+import { usePenTool } from '../../tools/usePenTool'
+import { usePointerTool } from '../../tools/usePointerTool'
+import type { Point } from '../../types/scene'
+
+function screenToScene(clientX: number, clientY: number): Point {
+  const { viewport } = useStore.getState()
+  return {
+    x: (clientX - viewport.offsetX) / viewport.scale,
+    y: (clientY - viewport.offsetY) / viewport.scale,
+  }
+}
+
+export function Canvas() {
+  const svgRef = useRef<SVGSVGElement>(null)
+  const activeTool = useStore((s) => s.activeTool)
+  const viewport = useStore((s) => s.viewport)
+  const isPanning = useRef(false)
+  const panStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 })
+
+  const penTool = usePenTool()
+  const pointerTool = usePointerTool()
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    // Middle-click to pan
+    if (e.button === 1) {
+      isPanning.current = true
+      const vp = useStore.getState().viewport
+      panStart.current = { x: e.clientX, y: e.clientY, ox: vp.offsetX, oy: vp.offsetY }
+      ;(e.target as SVGElement).setPointerCapture(e.pointerId)
+      e.preventDefault()
+      return
+    }
+
+    const scenePoint = screenToScene(e.clientX, e.clientY)
+    if (activeTool === 'pen') {
+      penTool.onPointerDown(e, scenePoint)
+    } else {
+      pointerTool.onPointerDown(e, scenePoint)
+    }
+  }, [activeTool, penTool, pointerTool])
+
+  const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    if (isPanning.current) {
+      const dx = e.clientX - panStart.current.x
+      const dy = e.clientY - panStart.current.y
+      useStore.getState().setViewport({
+        ...useStore.getState().viewport,
+        offsetX: panStart.current.ox + dx,
+        offsetY: panStart.current.oy + dy,
+      })
+      return
+    }
+
+    const scenePoint = screenToScene(e.clientX, e.clientY)
+    if (activeTool === 'pen') {
+      penTool.onPointerMove(e, scenePoint)
+    } else {
+      pointerTool.onPointerMove(e, scenePoint)
+    }
+  }, [activeTool, penTool, pointerTool])
+
+  const handlePointerUp = useCallback((_e: React.PointerEvent<SVGSVGElement>) => {
+    if (isPanning.current) {
+      isPanning.current = false
+      return
+    }
+
+    if (activeTool === 'pen') {
+      penTool.onPointerUp()
+    } else {
+      pointerTool.onPointerUp()
+    }
+  }, [activeTool, penTool, pointerTool])
+
+  const handleWheel = useCallback((e: WheelEvent) => {
+    e.preventDefault()
+    const { viewport } = useStore.getState()
+    const zoomFactor = e.deltaY < 0 ? 1.1 : 1 / 1.1
+    const newScale = Math.min(Math.max(viewport.scale * zoomFactor, 0.1), 10)
+
+    // Zoom toward cursor
+    const newOffsetX = e.clientX - (e.clientX - viewport.offsetX) * (newScale / viewport.scale)
+    const newOffsetY = e.clientY - (e.clientY - viewport.offsetY) * (newScale / viewport.scale)
+
+    useStore.getState().setViewport({
+      offsetX: newOffsetX,
+      offsetY: newOffsetY,
+      scale: newScale,
+    })
+  }, [])
+
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    svg.addEventListener('wheel', handleWheel, { passive: false })
+    return () => svg.removeEventListener('wheel', handleWheel)
+  }, [handleWheel])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return
+
+      switch (e.key) {
+        case 'v':
+        case 'V':
+          useStore.getState().setActiveTool('pointer')
+          break
+        case 'p':
+        case 'P':
+          useStore.getState().setActiveTool('pen')
+          break
+        case 'Delete':
+        case 'Backspace': {
+          const { selectedIds, deleteObjects } = useStore.getState()
+          if (selectedIds.size > 0) {
+            deleteObjects(selectedIds)
+          }
+          break
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+  }, [])
+
+  return (
+    <svg
+      ref={svgRef}
+      className={`canvas canvas--${activeTool}`}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onContextMenu={handleContextMenu}
+    >
+      <g transform={`translate(${viewport.offsetX}, ${viewport.offsetY}) scale(${viewport.scale})`}>
+        <SceneRenderer />
+        <ActiveStrokeRenderer />
+        <SelectionOverlay />
+      </g>
+    </svg>
+  )
+}
