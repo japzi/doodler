@@ -1,0 +1,126 @@
+import type { SceneObject, Point } from '../types/scene'
+import { generateRoughRect, generateRoughEllipse, generateRoughLine, generateRoughArrow } from '../rendering/roughPath'
+import { generateStrokePathData } from '../rendering/sketchyPath'
+import { boundingBoxFromRect, boundingBoxFromLine, computeBoundingBox } from './boundingBox'
+import { measureTextBounds } from './measureText'
+
+function scalePoint(p: Point, anchor: Point, sx: number, sy: number): Point {
+  return {
+    x: anchor.x + (p.x - anchor.x) * sx,
+    y: anchor.y + (p.y - anchor.y) * sy,
+  }
+}
+
+export function applyResize(obj: SceneObject, anchor: Point, scaleX: number, scaleY: number): SceneObject {
+  switch (obj.type) {
+    case 'rectangle': {
+      // World-space corners
+      const wx = obj.position.x + obj.x
+      const wy = obj.position.y + obj.y
+      const wx2 = wx + obj.width
+      const wy2 = wy + obj.height
+      const p1 = scalePoint({ x: wx, y: wy }, anchor, scaleX, scaleY)
+      const p2 = scalePoint({ x: wx2, y: wy2 }, anchor, scaleX, scaleY)
+      const nx = Math.min(p1.x, p2.x)
+      const ny = Math.min(p1.y, p2.y)
+      const nw = Math.abs(p2.x - p1.x)
+      const nh = Math.abs(p2.y - p1.y)
+      return {
+        ...obj,
+        x: 0, y: 0, width: nw, height: nh,
+        position: { x: nx, y: ny },
+        pathData: generateRoughRect(0, 0, nw, nh),
+        boundingBox: boundingBoxFromRect(0, 0, nw, nh),
+      }
+    }
+    case 'ellipse': {
+      const cx = obj.position.x + obj.x + obj.width / 2
+      const cy = obj.position.y + obj.y + obj.height / 2
+      const hw = obj.width / 2
+      const hh = obj.height / 2
+      const p1 = scalePoint({ x: cx - hw, y: cy - hh }, anchor, scaleX, scaleY)
+      const p2 = scalePoint({ x: cx + hw, y: cy + hh }, anchor, scaleX, scaleY)
+      const nx = Math.min(p1.x, p2.x)
+      const ny = Math.min(p1.y, p2.y)
+      const nw = Math.abs(p2.x - p1.x)
+      const nh = Math.abs(p2.y - p1.y)
+      return {
+        ...obj,
+        x: 0, y: 0, width: nw, height: nh,
+        position: { x: nx, y: ny },
+        pathData: generateRoughEllipse(nw / 2, nh / 2, nw, nh),
+        boundingBox: boundingBoxFromRect(0, 0, nw, nh),
+      }
+    }
+    case 'line': {
+      const wp1 = { x: obj.position.x + obj.x1, y: obj.position.y + obj.y1 }
+      const wp2 = { x: obj.position.x + obj.x2, y: obj.position.y + obj.y2 }
+      const np1 = scalePoint(wp1, anchor, scaleX, scaleY)
+      const np2 = scalePoint(wp2, anchor, scaleX, scaleY)
+      const ox = Math.min(np1.x, np2.x)
+      const oy = Math.min(np1.y, np2.y)
+      const lx1 = np1.x - ox
+      const ly1 = np1.y - oy
+      const lx2 = np2.x - ox
+      const ly2 = np2.y - oy
+      return {
+        ...obj,
+        x1: lx1, y1: ly1, x2: lx2, y2: ly2,
+        position: { x: ox, y: oy },
+        pathData: generateRoughLine(lx1, ly1, lx2, ly2),
+        boundingBox: boundingBoxFromLine(lx1, ly1, lx2, ly2),
+      }
+    }
+    case 'arrow': {
+      const wp1 = { x: obj.position.x + obj.x1, y: obj.position.y + obj.y1 }
+      const wp2 = { x: obj.position.x + obj.x2, y: obj.position.y + obj.y2 }
+      const np1 = scalePoint(wp1, anchor, scaleX, scaleY)
+      const np2 = scalePoint(wp2, anchor, scaleX, scaleY)
+      const ox = Math.min(np1.x, np2.x)
+      const oy = Math.min(np1.y, np2.y)
+      const lx1 = np1.x - ox
+      const ly1 = np1.y - oy
+      const lx2 = np2.x - ox
+      const ly2 = np2.y - oy
+      return {
+        ...obj,
+        x1: lx1, y1: ly1, x2: lx2, y2: ly2,
+        position: { x: ox, y: oy },
+        pathData: generateRoughArrow(lx1, ly1, lx2, ly2),
+        boundingBox: boundingBoxFromLine(lx1, ly1, lx2, ly2),
+      }
+    }
+    case 'pen': {
+      const scaledPoints = obj.points.map((p) => {
+        const wp = { x: obj.position.x + p.x, y: obj.position.y + p.y }
+        const sp = scalePoint(wp, anchor, scaleX, scaleY)
+        return { x: sp.x, y: sp.y, pressure: p.pressure }
+      })
+      const bb = computeBoundingBox(scaledPoints)
+      const localPoints = scaledPoints.map((p) => ({
+        x: p.x - bb.x,
+        y: p.y - bb.y,
+        pressure: p.pressure,
+      }))
+      return {
+        ...obj,
+        points: localPoints,
+        position: { x: bb.x, y: bb.y },
+        pathData: generateStrokePathData(localPoints),
+        boundingBox: computeBoundingBox(localPoints),
+      }
+    }
+    case 'text': {
+      const wp = { x: obj.position.x, y: obj.position.y }
+      const sp = scalePoint(wp, anchor, scaleX, scaleY)
+      const newFontSize = Math.max(8, Math.round(obj.fontSize * Math.abs(scaleY)))
+      const newBb = measureTextBounds(obj.text, newFontSize)
+      return {
+        ...obj,
+        position: sp,
+        fontSize: newFontSize,
+        boundingBox: newBb,
+      }
+    }
+  }
+}

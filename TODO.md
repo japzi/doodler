@@ -25,12 +25,12 @@
 - [x] Keyboard shortcuts (R → rectangle, E → ellipse, L → line, A → arrow)
 - [x] SVG export handles shapes (stroke) alongside pen strokes (fill)
 
-## v0.3 — Text `current`
+## v0.3 — Text `done`
 
 - [x] Text tool — click to place text on canvas
 - [x] xkcd-style handwriting font (Humor Sans)
 - [x] Inline text editing (double-click to edit)
-- [ ] Font size control
+- [x] Font size control
 - [x] Text color (uses stroke color)
 - [x] Font embedding on SVG export
 - [x] Keyboard shortcut (T → text)
@@ -43,13 +43,13 @@
 - [ ] Icons as editable objects (move, resize, recolor)
 - [ ] Data-driven catalog (JSON + SVG)
 
-## v0.5 — Object Manipulation
+## v0.5 — Object Manipulation `done`
 
-- [ ] Resize handles on selected objects
-- [ ] Aspect-ratio-locked resize (shift override)
-- [ ] Multi-select (shift+click and marquee drag)
-- [ ] Duplicate objects (Ctrl/Cmd+D)
-- [ ] Z-order controls (bring forward, send backward)
+- [x] Resize handles on selected objects
+- [x] Aspect-ratio-locked resize (shift override)
+- [x] Multi-select (shift+click and marquee drag)
+- [x] Duplicate objects (Ctrl/Cmd+D)
+- [x] Z-order controls (bring forward, send backward)
 
 ## v0.6 — Styling
 

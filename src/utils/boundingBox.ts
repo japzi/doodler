@@ -1,4 +1,4 @@
-import type { Point, BoundingBox } from '../types/scene'
+import type { Point, BoundingBox, SceneObject } from '../types/scene'
 
 export function boundingBoxFromRect(x: number, y: number, width: number, height: number): BoundingBox {
   return { x, y, width, height }
@@ -34,5 +34,24 @@ export function computeBoundingBox(points: Point[]): BoundingBox {
     y: minY,
     width: maxX - minX,
     height: maxY - minY,
+  }
+}
+
+export function boxesIntersect(a: BoundingBox, b: BoundingBox): boolean {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  )
+}
+
+export function getWorldBounds(obj: SceneObject): BoundingBox {
+  const bb = obj.boundingBox
+  return {
+    x: obj.position.x + bb.x,
+    y: obj.position.y + bb.y,
+    width: bb.width,
+    height: bb.height,
   }
 }

@@ -138,6 +138,38 @@ export function Canvas() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
 
+      const hasModifier = e.metaKey || e.ctrlKey
+
+      if (hasModifier) {
+        switch (e.key) {
+          case 'd':
+          case 'D': {
+            e.preventDefault()
+            const { selectedIds, duplicateObjects } = useStore.getState()
+            if (selectedIds.size > 0) {
+              duplicateObjects(selectedIds)
+            }
+            return
+          }
+          case ']': {
+            e.preventDefault()
+            const { selectedIds, bringForward } = useStore.getState()
+            if (selectedIds.size > 0) {
+              bringForward(selectedIds)
+            }
+            return
+          }
+          case '[': {
+            e.preventDefault()
+            const { selectedIds, sendBackward } = useStore.getState()
+            if (selectedIds.size > 0) {
+              sendBackward(selectedIds)
+            }
+            return
+          }
+        }
+      }
+
       switch (e.key) {
         case 'v':
         case 'V':
@@ -166,6 +198,9 @@ export function Canvas() {
         case 't':
         case 'T':
           useStore.getState().setActiveTool('text')
+          break
+        case 'Escape':
+          useStore.getState().setActiveTool('pointer')
           break
         case 'Delete':
         case 'Backspace': {

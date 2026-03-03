@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import type { SceneObject, Point, ViewportTransform, ToolType, ShapePreview, BoundingBox } from '../types/scene'
+import { generateId } from '../utils/idGenerator'
+import { applyResize } from '../utils/resize'
 
 interface DoodlerState {
   // Scene
@@ -22,12 +24,20 @@ interface DoodlerState {
   activeTextInput: { x: number; y: number } | null
   editingTextId: string | null
 
+  // Marquee selection
+  marqueeRect: BoundingBox | null
+
   // Actions
   addObject: (obj: SceneObject) => void
   deleteObjects: (ids: Set<string>) => void
   moveObjects: (ids: Set<string>, dx: number, dy: number) => void
   updateTextObject: (id: string, text: string, boundingBox: BoundingBox) => void
+  duplicateObjects: (ids: Set<string>) => void
+  bringForward: (ids: Set<string>) => void
+  sendBackward: (ids: Set<string>) => void
+  resizeObjects: (snapshots: Map<string, SceneObject>, anchor: Point, scaleX: number, scaleY: number) => void
   setSelectedIds: (ids: Set<string>) => void
+  setMarqueeRect: (rect: BoundingBox | null) => void
   setActiveTool: (tool: ToolType) => void
   setStrokeColor: (color: string) => void
   setFontSize: (size: number) => void
@@ -49,6 +59,7 @@ export const useStore = create<DoodlerState>((set) => ({
   activeShapePreview: null,
   activeTextInput: null,
   editingTextId: null,
+  marqueeRect: null,
 
   addObject: (obj) =>
     set((state) => ({ objects: [...state.objects, obj] })),
@@ -75,7 +86,56 @@ export const useStore = create<DoodlerState>((set) => ({
       ),
     })),
 
+  duplicateObjects: (ids) =>
+    set((state) => {
+      const clones: SceneObject[] = []
+      for (const obj of state.objects) {
+        if (ids.has(obj.id)) {
+          const clone = structuredClone(obj)
+          clone.id = generateId()
+          clone.position = { x: clone.position.x + 10, y: clone.position.y + 10 }
+          clones.push(clone)
+        }
+      }
+      return {
+        objects: [...state.objects, ...clones],
+        selectedIds: new Set(clones.map((c) => c.id)),
+      }
+    }),
+
+  bringForward: (ids) =>
+    set((state) => {
+      const arr = [...state.objects]
+      for (let i = arr.length - 2; i >= 0; i--) {
+        if (ids.has(arr[i].id) && !ids.has(arr[i + 1].id)) {
+          ;[arr[i], arr[i + 1]] = [arr[i + 1], arr[i]]
+        }
+      }
+      return { objects: arr }
+    }),
+
+  sendBackward: (ids) =>
+    set((state) => {
+      const arr = [...state.objects]
+      for (let i = 1; i < arr.length; i++) {
+        if (ids.has(arr[i].id) && !ids.has(arr[i - 1].id)) {
+          ;[arr[i], arr[i - 1]] = [arr[i - 1], arr[i]]
+        }
+      }
+      return { objects: arr }
+    }),
+
+  resizeObjects: (snapshots, anchor, scaleX, scaleY) =>
+    set((state) => ({
+      objects: state.objects.map((o) => {
+        const snap = snapshots.get(o.id)
+        if (!snap) return o
+        return applyResize(snap, anchor, scaleX, scaleY)
+      }),
+    })),
+
   setSelectedIds: (ids) => set({ selectedIds: ids }),
+  setMarqueeRect: (rect) => set({ marqueeRect: rect }),
   setActiveTool: (tool) => set({ activeTool: tool, selectedIds: new Set(), activeTextInput: null, editingTextId: null }),
   setStrokeColor: (color) => set({ strokeColor: color }),
   setFontSize: (size) => set({ fontSize: size }),
