@@ -59,6 +59,15 @@
 - [x] Color picker with preset palette + hex/RGB input
 - [x] Remember last-used style for new objects
 
+## v0.6.1 — Match Size `done`
+
+- [x] Floating action bar appears when 2+ objects selected
+- [x] "Same Width" — match all selected objects to first object's width
+- [x] "Same Height" — match all selected objects to first object's height
+- [x] "Same Size" — match both dimensions
+- [x] Bar disappears when fewer than 2 objects selected
+- [x] Works for all object types (shapes, pen, text, lines, arrows)
+
 ## v0.7 — Persistence
 
 - [ ] Auto-save to localStorage

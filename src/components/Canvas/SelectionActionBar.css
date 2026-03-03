@@ -1,0 +1,31 @@
+.selection-action-bar {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.selection-action-bar__button {
+  height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: #444;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.selection-action-bar__button:hover {
+  background: #f0f0f0;
+}

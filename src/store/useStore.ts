@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { SceneObject, Point, ViewportTransform, ToolType, ShapePreview, BoundingBox } from '../types/scene'
 import { generateId } from '../utils/idGenerator'
 import { applyResize } from '../utils/resize'
+import { getWorldBounds } from '../utils/boundingBox'
 
 const STYLES_KEY = 'doodler-styles'
 
@@ -57,6 +58,7 @@ interface DoodlerState {
   bringForward: (ids: Set<string>) => void
   sendBackward: (ids: Set<string>) => void
   resizeObjects: (snapshots: Map<string, SceneObject>, anchor: Point, scaleX: number, scaleY: number) => void
+  matchSize: (ids: Set<string>, mode: 'width' | 'height' | 'both') => void
   setSelectedIds: (ids: Set<string>) => void
   setMarqueeRect: (rect: BoundingBox | null) => void
   setActiveTool: (tool: ToolType) => void
@@ -160,6 +162,26 @@ export const useStore = create<DoodlerState>((set) => ({
         return applyResize(snap, anchor, scaleX, scaleY)
       }),
     })),
+
+  matchSize: (ids, mode) =>
+    set((state) => {
+      const ref = state.objects.find((o) => ids.has(o.id))
+      if (!ref) return state
+      const refBounds = getWorldBounds(ref)
+      if (refBounds.width === 0 || refBounds.height === 0) return state
+      return {
+        objects: state.objects.map((o) => {
+          if (!ids.has(o.id) || o.id === ref.id) return o
+          const objBounds = getWorldBounds(o)
+          if (objBounds.width === 0 || objBounds.height === 0) return o
+          const cx = objBounds.x + objBounds.width / 2
+          const cy = objBounds.y + objBounds.height / 2
+          const sx = mode === 'height' ? 1 : refBounds.width / objBounds.width
+          const sy = mode === 'width' ? 1 : refBounds.height / objBounds.height
+          return applyResize(o, { x: cx, y: cy }, sx, sy)
+        }),
+      }
+    }),
 
   setSelectedIds: (ids) => set({ selectedIds: ids }),
   setMarqueeRect: (rect) => set({ marqueeRect: rect }),

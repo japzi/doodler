@@ -6,6 +6,7 @@ import { ActiveStrokeRenderer } from './ActiveStrokeRenderer'
 import { ActiveShapeRenderer } from './ActiveShapeRenderer'
 import { SelectionOverlay } from './SelectionOverlay'
 import { TextInputOverlay } from './TextInputOverlay'
+import { SelectionActionBar } from './SelectionActionBar'
 import { usePenTool } from '../../tools/usePenTool'
 import { usePointerTool } from '../../tools/usePointerTool'
 import { useShapeTool } from '../../tools/useShapeTool'
@@ -246,6 +247,7 @@ export function Canvas() {
         </g>
       </svg>
       <TextInputOverlay />
+      <SelectionActionBar />
     </>
   )
 }
