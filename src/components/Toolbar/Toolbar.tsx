@@ -6,8 +6,10 @@ import { copySvgToClipboard } from '../../export/svgExport'
 export function Toolbar() {
   const activeTool = useStore((s) => s.activeTool)
   const strokeColor = useStore((s) => s.strokeColor)
+  const fontSize = useStore((s) => s.fontSize)
   const setActiveTool = useStore((s) => s.setActiveTool)
   const setStrokeColor = useStore((s) => s.setStrokeColor)
+  const setFontSize = useStore((s) => s.setFontSize)
   const [toast, setToast] = useState<string | null>(null)
 
   const handleCopySvg = useCallback(async () => {
@@ -100,6 +102,22 @@ export function Toolbar() {
           onChange={(e) => setStrokeColor(e.target.value)}
           title="Stroke color"
         />
+
+        {activeTool === 'text' && (
+          <>
+            <div className="toolbar__divider" />
+            <select
+              className="toolbar__font-size-select"
+              value={fontSize}
+              onChange={(e) => setFontSize(Number(e.target.value))}
+              title="Font size"
+            >
+              {[14, 18, 24, 32, 48, 64].map((size) => (
+                <option key={size} value={size}>{size}px</option>
+              ))}
+            </select>
+          </>
+        )}
 
         <div className="toolbar__divider" />
 

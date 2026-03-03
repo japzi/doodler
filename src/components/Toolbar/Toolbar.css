@@ -65,6 +65,28 @@
   border-radius: 4px;
 }
 
+.toolbar__font-size-select {
+  height: 32px;
+  padding: 0 8px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  color: #444;
+  cursor: pointer;
+  outline: none;
+  appearance: auto;
+}
+
+.toolbar__font-size-select:hover {
+  border-color: #ccc;
+}
+
+.toolbar__font-size-select:focus {
+  border-color: #1a73e8;
+}
+
 .toolbar__copy-button {
   display: flex;
   align-items: center;

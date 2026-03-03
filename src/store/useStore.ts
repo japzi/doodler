@@ -9,6 +9,7 @@ interface DoodlerState {
   // Tool
   activeTool: ToolType
   strokeColor: string
+  fontSize: number
 
   // Viewport
   viewport: ViewportTransform
@@ -29,6 +30,7 @@ interface DoodlerState {
   setSelectedIds: (ids: Set<string>) => void
   setActiveTool: (tool: ToolType) => void
   setStrokeColor: (color: string) => void
+  setFontSize: (size: number) => void
   setViewport: (viewport: ViewportTransform) => void
   setActiveStrokePoints: (points: Point[] | null) => void
   setActiveShapePreview: (preview: ShapePreview | null) => void
@@ -41,6 +43,7 @@ export const useStore = create<DoodlerState>((set) => ({
   selectedIds: new Set(),
   activeTool: 'pen',
   strokeColor: '#000000',
+  fontSize: 24,
   viewport: { offsetX: 0, offsetY: 0, scale: 1 },
   activeStrokePoints: null,
   activeShapePreview: null,
@@ -75,6 +78,7 @@ export const useStore = create<DoodlerState>((set) => ({
   setSelectedIds: (ids) => set({ selectedIds: ids }),
   setActiveTool: (tool) => set({ activeTool: tool, selectedIds: new Set(), activeTextInput: null, editingTextId: null }),
   setStrokeColor: (color) => set({ strokeColor: color }),
+  setFontSize: (size) => set({ fontSize: size }),
   setViewport: (viewport) => set({ viewport }),
   setActiveStrokePoints: (points) => set({ activeStrokePoints: points }),
   setActiveShapePreview: (preview) => set({ activeShapePreview: preview }),

@@ -4,12 +4,11 @@ import { generateId } from '../../utils/idGenerator'
 import { measureTextBounds } from '../../utils/measureText'
 import type { TextObject } from '../../types/scene'
 
-const DEFAULT_FONT_SIZE = 24
-
 export function TextInputOverlay() {
   const activeTextInput = useStore((s) => s.activeTextInput)
   const editingTextId = useStore((s) => s.editingTextId)
   const viewport = useStore((s) => s.viewport)
+  const storeFontSize = useStore((s) => s.fontSize)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const committedRef = useRef(false)
 
@@ -23,7 +22,7 @@ export function TextInputOverlay() {
   // Compute screen position from scene coords
   const sceneX = editingObject ? editingObject.position.x : activeTextInput?.x ?? 0
   const sceneY = editingObject ? editingObject.position.y : activeTextInput?.y ?? 0
-  const fontSize = editingObject?.fontSize ?? DEFAULT_FONT_SIZE
+  const fontSize = editingObject?.fontSize ?? storeFontSize
 
   const screenX = sceneX * viewport.scale + viewport.offsetX
   const screenY = sceneY * viewport.scale + viewport.offsetY
@@ -49,12 +48,13 @@ export function TextInputOverlay() {
       setEditingTextId(null)
     } else if (activeTextInput) {
       if (text !== '') {
-        const bbox = measureTextBounds(text, DEFAULT_FONT_SIZE)
+        const currentFontSize = useStore.getState().fontSize
+        const bbox = measureTextBounds(text, currentFontSize)
         const obj: TextObject = {
           type: 'text',
           id: generateId(),
           text,
-          fontSize: DEFAULT_FONT_SIZE,
+          fontSize: currentFontSize,
           color: useStore.getState().strokeColor,
           position: { x: activeTextInput.x, y: activeTextInput.y },
           boundingBox: bbox,
