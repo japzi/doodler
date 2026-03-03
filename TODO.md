@@ -12,7 +12,7 @@
 - [x] Keyboard shortcuts (V → pointer, P → pen)
 - [x] Toast notification on copy
 - [ ] Pinch-to-zoom gesture support
-- [ ] Zoom +/- controls in UI
+- [x] Zoom +/- controls in UI
 
 ## v0.2 — Shapes `done`
 
