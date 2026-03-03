@@ -48,14 +48,16 @@ export function TextInputOverlay() {
       setEditingTextId(null)
     } else if (activeTextInput) {
       if (text !== '') {
-        const currentFontSize = useStore.getState().fontSize
+        const state = useStore.getState()
+        const currentFontSize = state.fontSize
         const bbox = measureTextBounds(text, currentFontSize)
         const obj: TextObject = {
           type: 'text',
           id: generateId(),
           text,
           fontSize: currentFontSize,
-          color: useStore.getState().strokeColor,
+          color: state.strokeColor,
+          opacity: state.opacity,
           position: { x: activeTextInput.x, y: activeTextInput.y },
           boundingBox: bbox,
         }

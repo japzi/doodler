@@ -17,6 +17,8 @@ export interface PenStroke {
   points: Point[]
   pathData: string
   color: string
+  strokeWidth?: number
+  opacity?: number
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -29,6 +31,9 @@ export interface RectangleShape {
   width: number
   height: number
   color: string
+  fillColor?: string
+  strokeWidth?: number
+  opacity?: number
   pathData: string
   position: { x: number; y: number }
   boundingBox: BoundingBox
@@ -42,6 +47,9 @@ export interface EllipseShape {
   width: number
   height: number
   color: string
+  fillColor?: string
+  strokeWidth?: number
+  opacity?: number
   pathData: string
   position: { x: number; y: number }
   boundingBox: BoundingBox
@@ -55,6 +63,8 @@ export interface LineShape {
   x2: number
   y2: number
   color: string
+  strokeWidth?: number
+  opacity?: number
   pathData: string
   position: { x: number; y: number }
   boundingBox: BoundingBox
@@ -68,6 +78,8 @@ export interface ArrowShape {
   x2: number
   y2: number
   color: string
+  strokeWidth?: number
+  opacity?: number
   pathData: string
   position: { x: number; y: number }
   boundingBox: BoundingBox
@@ -79,6 +91,7 @@ export interface TextObject {
   text: string
   fontSize: number
   color: string
+  opacity?: number
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }

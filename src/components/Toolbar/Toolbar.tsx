@@ -2,13 +2,20 @@ import { useState, useCallback } from 'react'
 import './Toolbar.css'
 import { useStore } from '../../store/useStore'
 import { copySvgToClipboard } from '../../export/svgExport'
+import { ColorPicker } from './ColorPicker'
 
 export function Toolbar() {
   const activeTool = useStore((s) => s.activeTool)
   const strokeColor = useStore((s) => s.strokeColor)
+  const fillColor = useStore((s) => s.fillColor)
+  const strokeWidth = useStore((s) => s.strokeWidth)
+  const opacity = useStore((s) => s.opacity)
   const fontSize = useStore((s) => s.fontSize)
   const setActiveTool = useStore((s) => s.setActiveTool)
   const setStrokeColor = useStore((s) => s.setStrokeColor)
+  const setFillColor = useStore((s) => s.setFillColor)
+  const setStrokeWidth = useStore((s) => s.setStrokeWidth)
+  const setOpacity = useStore((s) => s.setOpacity)
   const setFontSize = useStore((s) => s.setFontSize)
   const [toast, setToast] = useState<string | null>(null)
 
@@ -18,6 +25,8 @@ export function Toolbar() {
     setToast(success ? 'SVG copied to clipboard!' : 'Failed to copy SVG')
     setTimeout(() => setToast(null), 2000)
   }, [])
+
+  const isShapeTool = activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'line' || activeTool === 'arrow'
 
   return (
     <>
@@ -95,13 +104,37 @@ export function Toolbar() {
 
         <div className="toolbar__divider" />
 
-        <input
-          type="color"
-          className="toolbar__color-input"
-          value={strokeColor}
-          onChange={(e) => setStrokeColor(e.target.value)}
-          title="Stroke color"
-        />
+        <ColorPicker value={strokeColor} onChange={setStrokeColor} label="Stroke" />
+
+        {(activeTool === 'rectangle' || activeTool === 'ellipse') && (
+          <ColorPicker value={fillColor} onChange={setFillColor} allowNone label="Fill" />
+        )}
+
+        {(activeTool === 'pen' || isShapeTool) && (
+          <select
+            className="toolbar__stroke-width-select"
+            value={strokeWidth}
+            onChange={(e) => setStrokeWidth(Number(e.target.value))}
+            title="Stroke width"
+          >
+            {[1, 2, 3, 4, 6, 8].map((w) => (
+              <option key={w} value={w}>{w}px</option>
+            ))}
+          </select>
+        )}
+
+        <div className="toolbar__opacity-control">
+          <input
+            className="toolbar__opacity-slider"
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(opacity * 100)}
+            onChange={(e) => setOpacity(Number(e.target.value) / 100)}
+            title="Opacity"
+          />
+          <span className="toolbar__opacity-label">{Math.round(opacity * 100)}%</span>
+        </div>
 
         {activeTool === 'text' && (
           <>

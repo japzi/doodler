@@ -35,7 +35,8 @@ function serializeTextObject(obj: TextObject): string {
     })
     .join('\n')
 
-  return `  <text font-family="'Humor Sans', cursive" font-size="${obj.fontSize}" fill="${obj.color}"${transform}>\n${tspans}\n  </text>`
+  const opacityAttr = obj.opacity !== undefined && obj.opacity !== 1 ? ` opacity="${obj.opacity}"` : ''
+  return `  <text font-family="'Humor Sans', cursive" font-size="${obj.fontSize}" fill="${obj.color}"${opacityAttr}${transform}>\n${tspans}\n  </text>`
 }
 
 export async function serializeToSvg(objects: SceneObject[]): Promise<string> {
@@ -82,10 +83,28 @@ export async function serializeToSvg(objects: SceneObject[]): Promise<string> {
       const transform = tx !== 0 || ty !== 0 ? ` transform="translate(${tx}, ${ty})"` : ''
       const isShape = obj.type !== 'pen'
 
+      const opacityAttr = obj.opacity !== undefined && obj.opacity !== 1 ? ` opacity="${obj.opacity}"` : ''
+
       if (isShape) {
-        return `  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="2"${transform}/>`
+        const fillColor = 'fillColor' in obj && obj.fillColor && obj.fillColor !== 'transparent' ? obj.fillColor : 'none'
+        const sw = 'strokeWidth' in obj && obj.strokeWidth ? obj.strokeWidth : 2
+        const strokePath = `  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>`
+
+        if (fillColor !== 'none' && (obj.type === 'rectangle' || obj.type === 'ellipse')) {
+          let fillEl = ''
+          if (obj.type === 'rectangle') {
+            fillEl = `  <rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" fill="${fillColor}" stroke="none"/>`
+          } else {
+            const cx = obj.x + obj.width / 2
+            const cy = obj.y + obj.height / 2
+            fillEl = `  <ellipse cx="${cx}" cy="${cy}" rx="${obj.width / 2}" ry="${obj.height / 2}" fill="${fillColor}" stroke="none"/>`
+          }
+          return `  <g${opacityAttr}${transform}>\n${fillEl}\n${strokePath}\n  </g>`
+        }
+
+        return `  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"${opacityAttr}${transform}/>`
       }
-      return `  <path d="${obj.pathData}" fill="${obj.color}"${transform}/>`
+      return `  <path d="${obj.pathData}" fill="${obj.color}"${opacityAttr}${transform}/>`
     })
     .join('\n')
 

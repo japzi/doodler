@@ -3,6 +3,24 @@ import type { SceneObject, Point, ViewportTransform, ToolType, ShapePreview, Bou
 import { generateId } from '../utils/idGenerator'
 import { applyResize } from '../utils/resize'
 
+const STYLES_KEY = 'doodler-styles'
+
+function loadStyles(): { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number } {
+  try {
+    const raw = localStorage.getItem(STYLES_KEY)
+    if (raw) return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, fontSize: 24, ...JSON.parse(raw) }
+  } catch { /* ignore */ }
+  return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, fontSize: 24 }
+}
+
+function persistStyles(state: { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number }) {
+  try {
+    localStorage.setItem(STYLES_KEY, JSON.stringify(state))
+  } catch { /* ignore */ }
+}
+
+const savedStyles = loadStyles()
+
 interface DoodlerState {
   // Scene
   objects: SceneObject[]
@@ -11,6 +29,9 @@ interface DoodlerState {
   // Tool
   activeTool: ToolType
   strokeColor: string
+  fillColor: string
+  strokeWidth: number
+  opacity: number
   fontSize: number
 
   // Viewport
@@ -40,6 +61,9 @@ interface DoodlerState {
   setMarqueeRect: (rect: BoundingBox | null) => void
   setActiveTool: (tool: ToolType) => void
   setStrokeColor: (color: string) => void
+  setFillColor: (color: string) => void
+  setStrokeWidth: (width: number) => void
+  setOpacity: (opacity: number) => void
   setFontSize: (size: number) => void
   setViewport: (viewport: ViewportTransform) => void
   setActiveStrokePoints: (points: Point[] | null) => void
@@ -52,8 +76,11 @@ export const useStore = create<DoodlerState>((set) => ({
   objects: [],
   selectedIds: new Set(),
   activeTool: 'pen',
-  strokeColor: '#000000',
-  fontSize: 24,
+  strokeColor: savedStyles.strokeColor,
+  fillColor: savedStyles.fillColor,
+  strokeWidth: savedStyles.strokeWidth,
+  opacity: savedStyles.opacity,
+  fontSize: savedStyles.fontSize,
   viewport: { offsetX: 0, offsetY: 0, scale: 1 },
   activeStrokePoints: null,
   activeShapePreview: null,
@@ -137,8 +164,31 @@ export const useStore = create<DoodlerState>((set) => ({
   setSelectedIds: (ids) => set({ selectedIds: ids }),
   setMarqueeRect: (rect) => set({ marqueeRect: rect }),
   setActiveTool: (tool) => set({ activeTool: tool, selectedIds: new Set(), activeTextInput: null, editingTextId: null }),
-  setStrokeColor: (color) => set({ strokeColor: color }),
-  setFontSize: (size) => set({ fontSize: size }),
+  setStrokeColor: (color) => set((state) => {
+    const styles = { strokeColor: color, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize }
+    persistStyles(styles)
+    return { strokeColor: color }
+  }),
+  setFillColor: (color) => set((state) => {
+    const styles = { strokeColor: state.strokeColor, fillColor: color, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize }
+    persistStyles(styles)
+    return { fillColor: color }
+  }),
+  setStrokeWidth: (width) => set((state) => {
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: width, opacity: state.opacity, fontSize: state.fontSize }
+    persistStyles(styles)
+    return { strokeWidth: width }
+  }),
+  setOpacity: (opacity) => set((state) => {
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity, fontSize: state.fontSize }
+    persistStyles(styles)
+    return { opacity }
+  }),
+  setFontSize: (size) => set((state) => {
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: size }
+    persistStyles(styles)
+    return { fontSize: size }
+  }),
   setViewport: (viewport) => set({ viewport }),
   setActiveStrokePoints: (points) => set({ activeStrokePoints: points }),
   setActiveShapePreview: (preview) => set({ activeShapePreview: preview }),

@@ -3,13 +3,17 @@ import { useStore } from '../../store/useStore'
 export function ActiveShapeRenderer() {
   const preview = useStore((s) => s.activeShapePreview)
   const strokeColor = useStore((s) => s.strokeColor)
+  const fillColor = useStore((s) => s.fillColor)
+  const strokeWidth = useStore((s) => s.strokeWidth)
 
   if (!preview) return null
+
+  const showFill = (preview.type === 'rectangle' || preview.type === 'ellipse') && fillColor !== 'transparent' && fillColor !== 'none'
 
   const commonProps = {
     fill: 'none',
     stroke: strokeColor,
-    strokeWidth: 2,
+    strokeWidth,
     strokeDasharray: '6 3',
     vectorEffect: 'non-scaling-stroke' as const,
   }
@@ -17,23 +21,33 @@ export function ActiveShapeRenderer() {
   switch (preview.type) {
     case 'rectangle':
       return (
-        <rect
-          x={preview.x}
-          y={preview.y}
-          width={preview.width}
-          height={preview.height}
-          {...commonProps}
-        />
+        <g>
+          {showFill && (
+            <rect x={preview.x} y={preview.y} width={preview.width} height={preview.height} fill={fillColor} stroke="none" opacity={0.5} />
+          )}
+          <rect
+            x={preview.x}
+            y={preview.y}
+            width={preview.width}
+            height={preview.height}
+            {...commonProps}
+          />
+        </g>
       )
     case 'ellipse':
       return (
-        <ellipse
-          cx={preview.x + preview.width / 2}
-          cy={preview.y + preview.height / 2}
-          rx={preview.width / 2}
-          ry={preview.height / 2}
-          {...commonProps}
-        />
+        <g>
+          {showFill && (
+            <ellipse cx={preview.x + preview.width / 2} cy={preview.y + preview.height / 2} rx={preview.width / 2} ry={preview.height / 2} fill={fillColor} stroke="none" opacity={0.5} />
+          )}
+          <ellipse
+            cx={preview.x + preview.width / 2}
+            cy={preview.y + preview.height / 2}
+            rx={preview.width / 2}
+            ry={preview.height / 2}
+            {...commonProps}
+          />
+        </g>
       )
     case 'line':
       return (

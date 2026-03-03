@@ -51,13 +51,13 @@
 - [x] Duplicate objects (Ctrl/Cmd+D)
 - [x] Z-order controls (bring forward, send backward)
 
-## v0.6 — Styling
+## v0.6 — Styling `done`
 
-- [ ] Fill color (including transparent/none)
-- [ ] Stroke width control
-- [ ] Object opacity
-- [ ] Color picker with preset palette + hex/RGB input
-- [ ] Remember last-used style for new objects
+- [x] Fill color (including transparent/none)
+- [x] Stroke width control
+- [x] Object opacity
+- [x] Color picker with preset palette + hex/RGB input
+- [x] Remember last-used style for new objects
 
 ## v0.7 — Persistence
 

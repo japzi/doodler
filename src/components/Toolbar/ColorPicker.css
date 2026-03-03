@@ -1,0 +1,148 @@
+.color-picker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.color-picker__label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #666;
+  user-select: none;
+}
+
+.color-picker__swatch {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 0;
+  cursor: pointer;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.color-picker__swatch:hover {
+  border-color: #ccc;
+}
+
+.color-picker__swatch-color {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+}
+
+.color-picker__swatch-none {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 3px,
+    #e0e0e0 3px,
+    #e0e0e0 4px
+  );
+}
+
+.color-picker__popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 6px;
+  padding: 10px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 300;
+  min-width: 180px;
+}
+
+.color-picker__palette {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.color-picker__palette-item {
+  width: 20px;
+  height: 20px;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.color-picker__palette-item:hover {
+  border-color: #999;
+}
+
+.color-picker__palette-item--active {
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 1px #1a73e8;
+}
+
+.color-picker__hex-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.color-picker__hex-input {
+  flex: 1;
+  height: 28px;
+  padding: 0 6px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: monospace;
+  outline: none;
+}
+
+.color-picker__hex-input:focus {
+  border-color: #1a73e8;
+}
+
+.color-picker__native-input {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.color-picker__native-input::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.color-picker__native-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 3px;
+}
+
+.color-picker__none-btn {
+  margin-top: 8px;
+  width: 100%;
+  height: 28px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #fafafa;
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+}
+
+.color-picker__none-btn:hover {
+  background: #f0f0f0;
+}
