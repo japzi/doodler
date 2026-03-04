@@ -5,6 +5,62 @@ import { applyResize } from '../utils/resize'
 import { getWorldBounds } from '../utils/boundingBox'
 
 const STYLES_KEY = 'doodler-styles'
+const DRAWING_KEY = 'doodler-drawing'
+
+function loadDrawing(): { objects: SceneObject[]; viewport: ViewportTransform } | null {
+  try {
+    const raw = localStorage.getItem(DRAWING_KEY)
+    if (raw) {
+      const data = JSON.parse(raw)
+      if (Array.isArray(data.objects) && data.viewport) return data
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
+function persistDrawing(objects: SceneObject[], viewport: ViewportTransform) {
+  try {
+    localStorage.setItem(DRAWING_KEY, JSON.stringify({ objects, viewport }))
+  } catch { /* ignore */ }
+}
+
+export function exportProject() {
+  const { objects, viewport } = useStore.getState()
+  const blob = new Blob([JSON.stringify({ version: 1, objects, viewport }, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'doodler-drawing.json'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+export function importProject(file: File): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result as string)
+        if (!data.version || !Array.isArray(data.objects)) {
+          reject(new Error('Invalid file format'))
+          return
+        }
+        useStore.setState({
+          objects: data.objects,
+          viewport: data.viewport ?? { offsetX: 0, offsetY: 0, scale: 1 },
+          selectedIds: new Set(),
+          activeTextInput: null,
+          editingTextId: null,
+        })
+        resolve()
+      } catch {
+        reject(new Error('Failed to parse file'))
+      }
+    }
+    reader.onerror = () => reject(new Error('Failed to read file'))
+    reader.readAsText(file)
+  })
+}
 
 function loadStyles(): { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number } {
   try {
@@ -21,6 +77,7 @@ function persistStyles(state: { strokeColor: string; fillColor: string; strokeWi
 }
 
 const savedStyles = loadStyles()
+const savedDrawing = loadDrawing()
 
 interface DoodlerState {
   // Scene
@@ -74,10 +131,11 @@ interface DoodlerState {
   setActiveShapePreview: (preview: ShapePreview | null) => void
   setActiveTextInput: (input: { x: number; y: number } | null) => void
   setEditingTextId: (id: string | null) => void
+  clearDrawing: () => void
 }
 
 export const useStore = create<DoodlerState>((set) => ({
-  objects: [],
+  objects: savedDrawing?.objects ?? [],
   selectedIds: new Set(),
   activeTool: 'pen',
   strokeColor: savedStyles.strokeColor,
@@ -85,7 +143,7 @@ export const useStore = create<DoodlerState>((set) => ({
   strokeWidth: savedStyles.strokeWidth,
   opacity: savedStyles.opacity,
   fontSize: savedStyles.fontSize,
-  viewport: { offsetX: 0, offsetY: 0, scale: 1 },
+  viewport: savedDrawing?.viewport ?? { offsetX: 0, offsetY: 0, scale: 1 },
   activeStrokePoints: null,
   activeShapePreview: null,
   activeTextInput: null,
@@ -313,4 +371,20 @@ export const useStore = create<DoodlerState>((set) => ({
   setActiveShapePreview: (preview) => set({ activeShapePreview: preview }),
   setActiveTextInput: (input) => set({ activeTextInput: input }),
   setEditingTextId: (id) => set({ editingTextId: id }),
+  clearDrawing: () => set({
+    objects: [],
+    selectedIds: new Set(),
+    viewport: { offsetX: 0, offsetY: 0, scale: 1 },
+    activeTextInput: null,
+    editingTextId: null,
+  }),
 }))
+
+// Auto-save drawing to localStorage on objects/viewport changes
+useStore.subscribe(
+  (state, prev) => {
+    if (state.objects !== prev.objects || state.viewport !== prev.viewport) {
+      persistDrawing(state.objects, state.viewport)
+    }
+  },
+)

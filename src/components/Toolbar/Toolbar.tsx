@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import './Toolbar.css'
 import { useStore } from '../../store/useStore'
+import { exportProject, importProject } from '../../store/useStore'
 import { copySvgToClipboard } from '../../export/svgExport'
 import { ColorPicker } from './ColorPicker'
 
@@ -17,7 +18,34 @@ export function Toolbar() {
   const setStrokeWidth = useStore((s) => s.setStrokeWidth)
   const setOpacity = useStore((s) => s.setOpacity)
   const setFontSize = useStore((s) => s.setFontSize)
+  const clearDrawing = useStore((s) => s.clearDrawing)
   const [toast, setToast] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleNewDrawing = useCallback(() => {
+    if (!window.confirm('Start a new drawing? Unsaved changes will be lost.')) return
+    clearDrawing()
+    setToast('New drawing created')
+    setTimeout(() => setToast(null), 2000)
+  }, [clearDrawing])
+
+  const handleSave = useCallback(() => {
+    exportProject()
+  }, [])
+
+  const handleLoad = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      await importProject(file)
+      setToast('Drawing loaded!')
+      setTimeout(() => setToast(null), 2000)
+    } catch {
+      setToast('Failed to load file')
+      setTimeout(() => setToast(null), 2000)
+    }
+    e.target.value = ''
+  }, [])
 
   const handleCopySvg = useCallback(async () => {
     const objects = useStore.getState().objects
@@ -165,6 +193,53 @@ export function Toolbar() {
           </svg>
           Copy SVG
         </button>
+
+        <div className="toolbar__divider" />
+
+        <button
+          className="toolbar__copy-button"
+          onClick={handleNewDrawing}
+          title="New drawing"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="12" y1="18" x2="12" y2="12" />
+            <line x1="9" y1="15" x2="15" y2="15" />
+          </svg>
+          New
+        </button>
+        <button
+          className="toolbar__copy-button"
+          onClick={handleSave}
+          title="Save drawing as JSON"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Save
+        </button>
+        <button
+          className="toolbar__copy-button"
+          onClick={() => fileInputRef.current?.click()}
+          title="Load drawing from JSON"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          Load
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          style={{ display: 'none' }}
+          onChange={handleLoad}
+        />
       </div>
 
       {toast && <div className="toast">{toast}</div>}

@@ -238,6 +238,7 @@ export function Canvas() {
         onPointerUp={handlePointerUp}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
+        onDragStart={(e) => e.preventDefault()}
       >
         <g transform={`translate(${viewport.offsetX}, ${viewport.offsetY}) scale(${viewport.scale})`}>
           <SceneRenderer />

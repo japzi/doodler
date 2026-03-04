@@ -79,12 +79,12 @@
 - [x] Make them equal spaced vertically
 - [x] Make them equal spaced horizontally
 
-## v0.7 — Persistence
+## v0.7 — Persistence `done`
 
-- [ ] Auto-save to localStorage
-- [ ] Restore drawing on page reload
-- [ ] Save/load as JSON project file
-- [ ] "New Drawing" action with confirmation
+- [x] Auto-save to localStorage
+- [x] Restore drawing on page reload
+- [x] Save/load as JSON project file
+- [x] "New Drawing" action with confirmation
 
 ## v0.8 — Polish
 
