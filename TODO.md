@@ -49,7 +49,7 @@
 - [x] Aspect-ratio-locked resize (shift override)
 - [x] Multi-select (shift+click and marquee drag)
 - [x] Duplicate objects (Ctrl/Cmd+D)
-- [x] Z-order controls (bring forward, send backward)
+- [x] Z-order controls (bring forward, bring to front, send backward, send to back)
 
 ## v0.6 — Styling `done`
 
