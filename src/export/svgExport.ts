@@ -93,9 +93,7 @@ export async function serializeToSvg(objects: SceneObject[]): Promise<string> {
           if (obj.type === 'rectangle') {
             fillEl = `  <rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
           } else {
-            const cx = obj.x + obj.width / 2
-            const cy = obj.y + obj.height / 2
-            fillEl = `  <ellipse cx="${cx}" cy="${cy}" rx="${obj.width / 2}" ry="${obj.height / 2}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
+            fillEl = `  <path d="${obj.pathData}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
           }
           return `  <g${transform}>\n${fillEl}\n${strokePath}\n  </g>`
         }
@@ -107,6 +105,19 @@ export async function serializeToSvg(objects: SceneObject[]): Promise<string> {
     .join('\n')
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vbX} ${vbY} ${vbW} ${vbH}">\n${styleBlock}${elements}\n</svg>`
+}
+
+export async function downloadSvg(objects: SceneObject[]): Promise<void> {
+  const svg = await serializeToSvg(objects)
+  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'doodler-drawing.svg'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 export async function copySvgToClipboard(objects: SceneObject[]): Promise<boolean> {

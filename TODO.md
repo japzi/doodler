@@ -99,7 +99,7 @@
 ## v0.9 - Polisher
 - [x] PNG export with configurable resolution
 - [x] Transparent background in PNG export
-- [ ] Download SVG file
+- [x] Download SVG file
 - [ ] Canvas grid/dot pattern (toggleable)
 - [ ] Zoom level indicator
 - [ ] Keyboard shortcut hints in tooltips

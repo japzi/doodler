@@ -34,9 +34,7 @@ function FillShape({ obj }: { obj: RectangleShape | EllipseShape }) {
   if (obj.type === 'rectangle') {
     return <rect x={obj.x} y={obj.y} width={obj.width} height={obj.height} fill={fillColor} stroke="none" opacity={opacity !== 1 ? opacity : undefined} />
   }
-  const cx = obj.x + obj.width / 2
-  const cy = obj.y + obj.height / 2
-  return <ellipse cx={cx} cy={cy} rx={obj.width / 2} ry={obj.height / 2} fill={fillColor} stroke="none" opacity={opacity !== 1 ? opacity : undefined} />
+  return <path d={obj.pathData} fill={fillColor} stroke="none" opacity={opacity !== 1 ? opacity : undefined} />
 }
 
 const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObject, TextObject> }) {

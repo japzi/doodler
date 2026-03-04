@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import './Toolbar.css'
 import { useStore } from '../../store/useStore'
 import { exportProject, importProject } from '../../store/useStore'
-import { copySvgToClipboard } from '../../export/svgExport'
+import { copySvgToClipboard, downloadSvg } from '../../export/svgExport'
 import { exportPng } from '../../export/pngExport'
 import { ColorPicker } from './ColorPicker'
 
@@ -71,6 +71,17 @@ export function Toolbar() {
     const objects = useStore.getState().objects
     const success = await copySvgToClipboard(objects)
     setToast(success ? 'SVG copied to clipboard!' : 'Failed to copy SVG')
+    setTimeout(() => setToast(null), 2000)
+  }, [])
+
+  const handleDownloadSvg = useCallback(async () => {
+    const objects = useStore.getState().objects
+    try {
+      await downloadSvg(objects)
+      setToast('SVG downloaded!')
+    } catch {
+      setToast('Failed to download SVG')
+    }
     setTimeout(() => setToast(null), 2000)
   }, [])
 
@@ -252,6 +263,18 @@ export function Toolbar() {
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
           PNG
+        </button>
+        <button
+          className="toolbar__copy-button"
+          onClick={handleDownloadSvg}
+          title="Download SVG file"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          SVG
         </button>
 
         <div className="toolbar__divider" />
