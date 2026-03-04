@@ -16,7 +16,11 @@ export function usePointerTool() {
   const dragAppliedDelta = useRef<Point>({ x: 0, y: 0 })
   const dragTarget = useRef<Set<string> | null>(null)
 
-  // Marquee state
+  // Pan state (left-click drag on empty space)
+  const isPanning = useRef(false)
+  const panStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 })
+
+  // Marquee state (shift+drag on empty space)
   const isMarquee = useRef(false)
   const marqueeStart = useRef<Point | null>(null)
   const shiftOnDown = useRef(false)
@@ -147,17 +151,33 @@ export function usePointerTool() {
       const firstSel = useStore.getState().objects.find((o) => selIds.has(o.id))
       dragRefPoint.current = firstSel ? { x: getWorldBounds(firstSel).x, y: getWorldBounds(firstSel).y } : scenePoint
       ;(e.target as SVGElement).setPointerCapture(e.pointerId)
-    } else {
-      // Start marquee
-      if (!e.shiftKey) {
-        useStore.getState().setSelectedIds(new Set())
-      }
+    } else if (e.shiftKey) {
+      // Shift+drag on empty space: marquee selection
       isMarquee.current = true
       marqueeStart.current = scenePoint
+    } else {
+      // Drag on empty space: pan
+      useStore.getState().setSelectedIds(new Set())
+      isPanning.current = true
+      const vp = useStore.getState().viewport
+      panStart.current = { x: e.clientX, y: e.clientY, ox: vp.offsetX, oy: vp.offsetY }
+      ;(e.target as SVGElement).setPointerCapture(e.pointerId)
     }
   }, [])
 
   const onPointerMove = useCallback((_e: React.PointerEvent<SVGSVGElement>, scenePoint: Point) => {
+    // Pan
+    if (isPanning.current) {
+      const dx = _e.clientX - panStart.current.x
+      const dy = _e.clientY - panStart.current.y
+      useStore.getState().setViewport({
+        ...useStore.getState().viewport,
+        offsetX: panStart.current.ox + dx,
+        offsetY: panStart.current.oy + dy,
+      })
+      return
+    }
+
     // Line/Arrow handle drag
     if (lineArrowHandleDrag.current) {
       const { objId, objType, handleType, snapshot, startPoint } = lineArrowHandleDrag.current
@@ -269,6 +289,12 @@ export function usePointerTool() {
   }, [])
 
   const onPointerUp = useCallback(() => {
+    // Pan cleanup
+    if (isPanning.current) {
+      isPanning.current = false
+      return
+    }
+
     // Line/Arrow handle drag cleanup
     if (lineArrowHandleDrag.current) {
       lineArrowHandleDrag.current = null
