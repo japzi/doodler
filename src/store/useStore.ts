@@ -111,6 +111,9 @@ interface DoodlerState {
   activeTextInput: { x: number; y: number } | null
   editingTextId: string | null
 
+  // View options
+  showGrid: boolean
+
   // Marquee selection
   marqueeRect: BoundingBox | null
 
@@ -145,6 +148,7 @@ interface DoodlerState {
   setActiveShapePreview: (preview: ShapePreview | null) => void
   setActiveTextInput: (input: { x: number; y: number } | null) => void
   setEditingTextId: (id: string | null) => void
+  toggleGrid: () => void
   clearDrawing: () => void
   updateObjectStyles: (ids: Set<string>, styles: { color?: string; fillColor?: string; strokeWidth?: number; opacity?: number }) => void
   updateLineGeometry: (id: string, updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }>) => void
@@ -167,6 +171,7 @@ export const useStore = create<DoodlerState>((set) => ({
   activeShapePreview: null,
   activeTextInput: null,
   editingTextId: null,
+  showGrid: false,
   marqueeRect: null,
   _history: [],
   _future: [],
@@ -473,6 +478,7 @@ export const useStore = create<DoodlerState>((set) => ({
   setActiveShapePreview: (preview) => set({ activeShapePreview: preview }),
   setActiveTextInput: (input) => set({ activeTextInput: input }),
   setEditingTextId: (id) => set({ editingTextId: id }),
+  toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
   updateObjectStyles: (ids, styles) =>
     set((state) => ({
       _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],

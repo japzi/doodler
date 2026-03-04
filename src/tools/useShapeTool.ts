@@ -4,6 +4,7 @@ import { generateId } from '../utils/idGenerator'
 import { boundingBoxFromRect, boundingBoxFromLine } from '../utils/boundingBox'
 import { generateRoughRect, generateRoughEllipse, generateRoughLine, generateRoughArrow } from '../rendering/roughPath'
 import type { Point, ShapeToolType } from '../types/scene'
+import { snapToGrid } from '../utils/grid'
 
 export function useShapeTool() {
   const isDrawing = useRef(false)
@@ -12,20 +13,21 @@ export function useShapeTool() {
   const onPointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>, scenePoint: Point) => {
     if (e.button !== 0) return
     isDrawing.current = true
-    startPoint.current = scenePoint
+    const sp = snapToGrid(scenePoint)
+    startPoint.current = sp
     ;(e.target as SVGElement).setPointerCapture(e.pointerId)
 
     const tool = useStore.getState().activeTool as ShapeToolType
     useStore.getState().setActiveShapePreview({
       type: tool,
-      x: scenePoint.x,
-      y: scenePoint.y,
+      x: sp.x,
+      y: sp.y,
       width: 0,
       height: 0,
-      x1: scenePoint.x,
-      y1: scenePoint.y,
-      x2: scenePoint.x,
-      y2: scenePoint.y,
+      x1: sp.x,
+      y1: sp.y,
+      x2: sp.x,
+      y2: sp.y,
     })
   }, [])
 
@@ -33,27 +35,27 @@ export function useShapeTool() {
     if (!isDrawing.current) return
     const tool = useStore.getState().activeTool as ShapeToolType
     const sp = startPoint.current
+    const ep = snapToGrid(scenePoint)
 
     if (tool === 'rectangle' || tool === 'ellipse') {
-      // Normalize so x,y is always top-left
-      const x = Math.min(sp.x, scenePoint.x)
-      const y = Math.min(sp.y, scenePoint.y)
-      const width = Math.abs(scenePoint.x - sp.x)
-      const height = Math.abs(scenePoint.y - sp.y)
+      const x = Math.min(sp.x, ep.x)
+      const y = Math.min(sp.y, ep.y)
+      const width = Math.abs(ep.x - sp.x)
+      const height = Math.abs(ep.y - sp.y)
 
       useStore.getState().setActiveShapePreview({
         type: tool,
         x, y, width, height,
-        x1: sp.x, y1: sp.y, x2: scenePoint.x, y2: scenePoint.y,
+        x1: sp.x, y1: sp.y, x2: ep.x, y2: ep.y,
       })
     } else {
       useStore.getState().setActiveShapePreview({
         type: tool,
-        x: Math.min(sp.x, scenePoint.x),
-        y: Math.min(sp.y, scenePoint.y),
-        width: Math.abs(scenePoint.x - sp.x),
-        height: Math.abs(scenePoint.y - sp.y),
-        x1: sp.x, y1: sp.y, x2: scenePoint.x, y2: scenePoint.y,
+        x: Math.min(sp.x, ep.x),
+        y: Math.min(sp.y, ep.y),
+        width: Math.abs(ep.x - sp.x),
+        height: Math.abs(ep.y - sp.y),
+        x1: sp.x, y1: sp.y, x2: ep.x, y2: ep.y,
       })
     }
   }, [])

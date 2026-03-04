@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useStore } from '../store/useStore'
 import type { Point } from '../types/scene'
+import { snapToGrid } from '../utils/grid'
 
 export function useTextTool() {
   const onPointerDown = useCallback((e: React.PointerEvent, scenePoint: Point) => {
@@ -9,7 +10,8 @@ export function useTextTool() {
     if (activeTextInput || editingTextId) return
     // Prevent the browser from shifting focus away from the textarea that's about to appear
     e.preventDefault()
-    useStore.getState().setActiveTextInput({ x: scenePoint.x, y: scenePoint.y })
+    const sp = snapToGrid(scenePoint)
+    useStore.getState().setActiveTextInput({ x: sp.x, y: sp.y })
   }, [])
 
   const onPointerMove = useCallback(() => {}, [])

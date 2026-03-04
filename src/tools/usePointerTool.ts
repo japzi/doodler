@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore'
 import { getObjectIdFromEvent } from '../utils/hitTest'
 import { boxesIntersect, getWorldBounds } from '../utils/boundingBox'
 import type { Point, SceneObject, ArrowShape, LineShape, BoundingBox } from '../types/scene'
+import { snapToGrid } from '../utils/grid'
 
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se'
 type LineArrowHandleType = 'p1' | 'p2' | 'cp1' | 'cp2' | 'midpoint' | 'headSize'
@@ -10,6 +11,9 @@ type LineArrowHandleType = 'p1' | 'p2' | 'cp1' | 'cp2' | 'midpoint' | 'headSize'
 export function usePointerTool() {
   const isDragging = useRef(false)
   const lastPoint = useRef<Point | null>(null)
+  const dragStartCursor = useRef<Point | null>(null)
+  const dragRefPoint = useRef<Point | null>(null)
+  const dragAppliedDelta = useRef<Point>({ x: 0, y: 0 })
   const dragTarget = useRef<Set<string> | null>(null)
 
   // Marquee state
@@ -135,7 +139,13 @@ export function usePointerTool() {
       useStore.getState().saveSnapshot()
       isDragging.current = true
       lastPoint.current = scenePoint
+      dragStartCursor.current = scenePoint
+      dragAppliedDelta.current = { x: 0, y: 0 }
       dragTarget.current = new Set(useStore.getState().selectedIds)
+      // Record first selected object's world bbox origin as snap reference
+      const selIds = useStore.getState().selectedIds
+      const firstSel = useStore.getState().objects.find((o) => selIds.has(o.id))
+      dragRefPoint.current = firstSel ? { x: getWorldBounds(firstSel).x, y: getWorldBounds(firstSel).y } : scenePoint
       ;(e.target as SVGElement).setPointerCapture(e.pointerId)
     } else {
       // Start marquee
@@ -229,11 +239,19 @@ export function usePointerTool() {
     }
 
     // Drag
-    if (isDragging.current && lastPoint.current && dragTarget.current) {
-      const dx = scenePoint.x - lastPoint.current.x
-      const dy = scenePoint.y - lastPoint.current.y
-      useStore.getState().moveObjects(dragTarget.current, dx, dy)
-      lastPoint.current = scenePoint
+    if (isDragging.current && dragStartCursor.current && dragRefPoint.current && dragTarget.current) {
+      const rawDx = scenePoint.x - dragStartCursor.current.x
+      const rawDy = scenePoint.y - dragStartCursor.current.y
+      // Snap the object's reference point (bbox origin), not the cursor
+      const snapped = snapToGrid({ x: dragRefPoint.current.x + rawDx, y: dragRefPoint.current.y + rawDy })
+      const snappedDx = snapped.x - dragRefPoint.current.x
+      const snappedDy = snapped.y - dragRefPoint.current.y
+      const moveDx = snappedDx - dragAppliedDelta.current.x
+      const moveDy = snappedDy - dragAppliedDelta.current.y
+      if (moveDx !== 0 || moveDy !== 0) {
+        useStore.getState().moveObjects(dragTarget.current, moveDx, moveDy)
+        dragAppliedDelta.current = { x: snappedDx, y: snappedDy }
+      }
       return
     }
 
@@ -296,6 +314,9 @@ export function usePointerTool() {
 
     isDragging.current = false
     lastPoint.current = null
+    dragStartCursor.current = null
+    dragRefPoint.current = null
+    dragAppliedDelta.current = { x: 0, y: 0 }
     dragTarget.current = null
   }, [])
 

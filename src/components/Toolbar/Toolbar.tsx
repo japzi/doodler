@@ -23,6 +23,8 @@ export function Toolbar() {
   const updateObjectStyles = useStore((s) => s.updateObjectStyles)
   const selectedIds = useStore((s) => s.selectedIds)
   const objects = useStore((s) => s.objects)
+  const showGrid = useStore((s) => s.showGrid)
+  const toggleGrid = useStore((s) => s.toggleGrid)
   const [toast, setToast] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -104,7 +106,7 @@ export function Toolbar() {
         <button
           className={`toolbar__button ${activeTool === 'pointer' ? 'toolbar__button--active' : ''}`}
           onClick={() => setActiveTool('pointer')}
-          title="Pointer (V)"
+          data-tooltip="Pointer (V)"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
@@ -114,7 +116,7 @@ export function Toolbar() {
         <button
           className={`toolbar__button ${activeTool === 'text' ? 'toolbar__button--active' : ''}`}
           onClick={() => setActiveTool('text')}
-          title="Text (T)"
+          data-tooltip="Text (T)"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
             <path d="M5 4v3h5.5v12h3V7H19V4z" />
@@ -123,7 +125,7 @@ export function Toolbar() {
         <button
           className={`toolbar__button ${activeTool === 'pen' ? 'toolbar__button--active' : ''}`}
           onClick={() => setActiveTool('pen')}
-          title="Pen (P)"
+          data-tooltip="Pen (P)"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 19l7-7 3 3-7 7-3-3z" />
@@ -138,7 +140,7 @@ export function Toolbar() {
         <button
           className={`toolbar__button ${activeTool === 'rectangle' ? 'toolbar__button--active' : ''}`}
           onClick={() => setActiveTool('rectangle')}
-          title="Rectangle (R)"
+          data-tooltip="Rectangle (R)"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -147,7 +149,7 @@ export function Toolbar() {
         <button
           className={`toolbar__button ${activeTool === 'ellipse' ? 'toolbar__button--active' : ''}`}
           onClick={() => setActiveTool('ellipse')}
-          title="Ellipse (E)"
+          data-tooltip="Ellipse (E)"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <ellipse cx="12" cy="12" rx="10" ry="8" />
@@ -156,7 +158,7 @@ export function Toolbar() {
         <button
           className={`toolbar__button ${activeTool === 'line' ? 'toolbar__button--active' : ''}`}
           onClick={() => setActiveTool('line')}
-          title="Line (L)"
+          data-tooltip="Line (L)"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="5" y1="19" x2="19" y2="5" />
@@ -165,7 +167,7 @@ export function Toolbar() {
         <button
           className={`toolbar__button ${activeTool === 'arrow' ? 'toolbar__button--active' : ''}`}
           onClick={() => setActiveTool('arrow')}
-          title="Arrow (A)"
+          data-tooltip="Arrow (A)"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="19" x2="19" y2="5" />
@@ -196,7 +198,7 @@ export function Toolbar() {
               setStrokeWidth(w)
               if (hasSelection) updateObjectStyles(selectedIds, { strokeWidth: w })
             }}
-            title="Stroke width"
+            data-tooltip="Stroke width"
           >
             {[1, 2, 3, 4, 6, 8].map((w) => (
               <option key={w} value={w}>{w}px</option>
@@ -217,7 +219,7 @@ export function Toolbar() {
                 setOpacity(o)
                 if (hasSelection) updateObjectStyles(selectedIds, { opacity: o })
               }}
-              title="Fill opacity"
+              data-tooltip="Fill opacity"
             />
             <span className="toolbar__opacity-label">{Math.round(opacity * 100)}%</span>
           </div>
@@ -230,7 +232,7 @@ export function Toolbar() {
               className="toolbar__font-size-select"
               value={fontSize}
               onChange={(e) => setFontSize(Number(e.target.value))}
-              title="Font size"
+              data-tooltip="Font size"
             >
               {[14, 18, 24, 32, 48, 64].map((size) => (
                 <option key={size} value={size}>{size}px</option>
@@ -242,9 +244,29 @@ export function Toolbar() {
         <div className="toolbar__divider" />
 
         <button
+          className={`toolbar__button ${showGrid ? 'toolbar__button--active' : ''}`}
+          onClick={toggleGrid}
+          data-tooltip="Grid (G)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="4" cy="4" r="1.5" />
+            <circle cx="12" cy="4" r="1.5" />
+            <circle cx="20" cy="4" r="1.5" />
+            <circle cx="4" cy="12" r="1.5" />
+            <circle cx="12" cy="12" r="1.5" />
+            <circle cx="20" cy="12" r="1.5" />
+            <circle cx="4" cy="20" r="1.5" />
+            <circle cx="12" cy="20" r="1.5" />
+            <circle cx="20" cy="20" r="1.5" />
+          </svg>
+        </button>
+
+        <div className="toolbar__divider" />
+
+        <button
           className="toolbar__copy-button"
           onClick={handleCopySvg}
-          title="Copy SVG to clipboard"
+          data-tooltip="Copy SVG"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -255,7 +277,7 @@ export function Toolbar() {
         <button
           className="toolbar__copy-button"
           onClick={handleExportPng}
-          title="Export as PNG (2x resolution, transparent)"
+          data-tooltip="Export PNG"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -267,7 +289,7 @@ export function Toolbar() {
         <button
           className="toolbar__copy-button"
           onClick={handleDownloadSvg}
-          title="Download SVG file"
+          data-tooltip="Download SVG"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -282,7 +304,7 @@ export function Toolbar() {
         <button
           className="toolbar__copy-button"
           onClick={handleNewDrawing}
-          title="New drawing"
+          data-tooltip="New drawing"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -295,7 +317,7 @@ export function Toolbar() {
         <button
           className="toolbar__copy-button"
           onClick={handleSave}
-          title="Save drawing as JSON"
+          data-tooltip="Save"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -307,7 +329,7 @@ export function Toolbar() {
         <button
           className="toolbar__copy-button"
           onClick={() => fileInputRef.current?.click()}
-          title="Load drawing from JSON"
+          data-tooltip="Load"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />

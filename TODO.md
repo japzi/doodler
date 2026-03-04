@@ -96,13 +96,13 @@
 - [x] Select all (Cmd/Ctrl+A)
 - [x] Opacity applies only to fill (not stroke/text)
 
-## v0.9 - Polisher
+## v0.9 - Polisher `done`
 - [x] PNG export with configurable resolution
 - [x] Transparent background in PNG export
 - [x] Download SVG file
-- [ ] Canvas grid/dot pattern (toggleable)
-- [ ] Zoom level indicator
-- [ ] Keyboard shortcut hints in tooltips
+- [x] Canvas grid/dot pattern (toggleable)
+- [x] Zoom level indicator
+- [x] Keyboard shortcut hints in tooltips
 
 ## v1.0 — Launch
 

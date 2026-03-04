@@ -13,6 +13,7 @@ import { useShapeTool } from '../../tools/useShapeTool'
 import { useTextTool } from '../../tools/useTextTool'
 import { getObjectIdFromEvent } from '../../utils/hitTest'
 import type { Point } from '../../types/scene'
+import { getGridSize } from '../../utils/grid'
 
 const shapeTools = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow'])
 
@@ -28,6 +29,7 @@ export function Canvas() {
   const svgRef = useRef<SVGSVGElement>(null)
   const activeTool = useStore((s) => s.activeTool)
   const viewport = useStore((s) => s.viewport)
+  const showGrid = useStore((s) => s.showGrid)
   const isPanning = useRef(false)
   const panStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 })
 
@@ -217,6 +219,10 @@ export function Canvas() {
         case 'T':
           useStore.getState().setActiveTool('text')
           break
+        case 'g':
+        case 'G':
+          useStore.getState().toggleGrid()
+          break
         case 'Escape':
           useStore.getState().setActiveTool('pointer')
           break
@@ -258,6 +264,28 @@ export function Canvas() {
         onDragStart={(e) => e.preventDefault()}
       >
         <g transform={`translate(${viewport.offsetX}, ${viewport.offsetY}) scale(${viewport.scale})`}>
+          {showGrid && (() => {
+            const GRID = getGridSize(viewport.scale)
+            const dotR = 1.5 / viewport.scale
+            const vx = -viewport.offsetX / viewport.scale
+            const vy = -viewport.offsetY / viewport.scale
+            const vw = window.innerWidth / viewport.scale
+            const vh = window.innerHeight / viewport.scale
+            const gx = Math.floor(vx / GRID) * GRID
+            const gy = Math.floor(vy / GRID) * GRID
+            const gw = Math.ceil(vw / GRID + 2) * GRID
+            const gh = Math.ceil(vh / GRID + 2) * GRID
+            return (
+              <>
+                <defs>
+                  <pattern id="grid-dots" width={GRID} height={GRID} patternUnits="userSpaceOnUse">
+                    <circle cx={GRID / 2} cy={GRID / 2} r={dotR} fill="#bbb" />
+                  </pattern>
+                </defs>
+                <rect x={gx} y={gy} width={gw} height={gh} fill="url(#grid-dots)" />
+              </>
+            )
+          })()}
           <SceneRenderer />
           <ActiveStrokeRenderer />
           <ActiveShapeRenderer />
