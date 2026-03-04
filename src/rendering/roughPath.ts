@@ -29,6 +29,19 @@ export function generateRoughLine(x1: number, y1: number, x2: number, y2: number
   return drawableToPaths(drawable)
 }
 
+export function generateRoughCurvedLine(
+  x1: number, y1: number,
+  cp1x: number, cp1y: number,
+  cp2x: number, cp2y: number,
+  x2: number, y2: number,
+): string {
+  const drawable = generator.path(
+    `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`,
+    defaultOptions,
+  )
+  return drawableToPaths(drawable)
+}
+
 export function generateRoughArrow(x1: number, y1: number, x2: number, y2: number, headLength = 16): string {
   // Main line
   const lineDrawable = generator.line(x1, y1, x2, y2, defaultOptions)

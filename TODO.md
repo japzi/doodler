@@ -89,7 +89,9 @@
 ## v0.8 — Polish
 
 - [x] Select an object and change stroke/fill color and transparency
-- [ ] Allow arrows to be curved. When arrow is selected, only show corner points. At mouse over, show a center control point, upon clicking break the arrow in the middle. Also let two handles in that position to change the gradient at that point allowing arrow to take the shape of a curve. 
+- [x] Allow arrows to be curved. When arrow is selected, only show corner points. At mouse over, show a center control point, upon clicking break the arrow in the middle. Also let two handles in that position to change the gradient at that point allowing arrow to take the shape of a curve.
+- [x] Allow lines to be curved. When line is selected, only show corner points. At mouse over, show a center control point, upon clicking break the line in the middle. Also let two handles in that position to change the gradient at that point allowing line to take the shape of a curve.
+- [x] Draggable arrowhead size control (yellow handle near arrowhead tip)
 - [ ] Undo/redo (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z)
 - [ ] PNG export with configurable resolution
 - [ ] Transparent background in PNG export

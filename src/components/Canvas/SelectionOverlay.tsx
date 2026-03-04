@@ -1,5 +1,5 @@
 import { useStore } from '../../store/useStore'
-import type { ArrowShape } from '../../types/scene'
+import type { ArrowShape, LineShape } from '../../types/scene'
 
 export function SelectionOverlay() {
   const selectedIds = useStore((s) => s.selectedIds)
@@ -16,56 +16,25 @@ export function SelectionOverlay() {
   if (selectedIds.size > 0) {
     const selected = objects.filter((o) => selectedIds.has(o.id))
     if (selected.length > 0) {
-      // Single arrow selection — show arrow-specific handles
       const isSingleArrow = selected.length === 1 && selected[0].type === 'arrow'
+      const isSingleLine = selected.length === 1 && selected[0].type === 'line'
 
-      if (isSingleArrow) {
-        const arrow = selected[0] as ArrowShape
-        const ox = arrow.position.x
-        const oy = arrow.position.y
-        const p1x = ox + arrow.x1
-        const p1y = oy + arrow.y1
-        const p2x = ox + arrow.x2
-        const p2y = oy + arrow.y2
-        const isCurved = !!(arrow.cp1 && arrow.cp2)
-
-        // Compute arrowhead size handle position — along one wing of the arrowhead
-        const headSize = arrow.arrowHeadSize ?? 16
-        let arrowAngle: number
-        if (isCurved) {
-          let tdx = arrow.x2 - arrow.cp2!.x
-          let tdy = arrow.y2 - arrow.cp2!.y
-          if (Math.abs(tdx) < 0.001 && Math.abs(tdy) < 0.001) {
-            tdx = arrow.x2 - arrow.x1
-            tdy = arrow.y2 - arrow.y1
-          }
-          arrowAngle = Math.atan2(tdy, tdx)
-        } else {
-          arrowAngle = Math.atan2(p2y - p1y, p2x - p1x)
-        }
-        const headAngle = Math.PI / 6
-        const hsHandleX = p2x - headSize * Math.cos(arrowAngle - headAngle)
-        const hsHandleY = p2y - headSize * Math.sin(arrowAngle - headAngle)
-
-        const headSizeHandle = (
-          <circle
-            data-arrow-handle="headSize"
-            cx={hsHandleX}
-            cy={hsHandleY}
-            r={handleRadius}
-            fill="#f5c542"
-            stroke="#c49b1a"
-            strokeWidth={1}
-            vectorEffect="non-scaling-stroke"
-            style={{ cursor: 'ew-resize' }}
-            pointerEvents="auto"
-          />
-        )
+      if (isSingleArrow || isSingleLine) {
+        const obj = selected[0] as ArrowShape | LineShape
+        const ox = obj.position.x
+        const oy = obj.position.y
+        const p1x = ox + obj.x1
+        const p1y = oy + obj.y1
+        const p2x = ox + obj.x2
+        const p2y = oy + obj.y2
+        const isCurved = !!(obj.cp1 && obj.cp2)
+        // Use data-line-handle for lines, data-arrow-handle for arrows
+        const handleAttr = isSingleArrow ? 'data-arrow-handle' : 'data-line-handle'
 
         const endpointHandles = (
           <>
             <circle
-              data-arrow-handle="p1"
+              {...{ [handleAttr]: 'p1' }}
               cx={p1x}
               cy={p1y}
               r={handleRadius}
@@ -77,7 +46,7 @@ export function SelectionOverlay() {
               pointerEvents="auto"
             />
             <circle
-              data-arrow-handle="p2"
+              {...{ [handleAttr]: 'p2' }}
               cx={p2x}
               cy={p2y}
               r={handleRadius}
@@ -91,11 +60,48 @@ export function SelectionOverlay() {
           </>
         )
 
+        // Arrow-specific: arrowhead size handle
+        let headSizeHandle: React.ReactNode = null
+        if (isSingleArrow) {
+          const arrow = obj as ArrowShape
+          const headSize = arrow.arrowHeadSize ?? 16
+          let arrowAngle: number
+          if (isCurved) {
+            let tdx = arrow.x2 - arrow.cp2!.x
+            let tdy = arrow.y2 - arrow.cp2!.y
+            if (Math.abs(tdx) < 0.001 && Math.abs(tdy) < 0.001) {
+              tdx = arrow.x2 - arrow.x1
+              tdy = arrow.y2 - arrow.y1
+            }
+            arrowAngle = Math.atan2(tdy, tdx)
+          } else {
+            arrowAngle = Math.atan2(p2y - p1y, p2x - p1x)
+          }
+          const headAngle = Math.PI / 6
+          const hsHandleX = p2x - headSize * Math.cos(arrowAngle - headAngle)
+          const hsHandleY = p2y - headSize * Math.sin(arrowAngle - headAngle)
+
+          headSizeHandle = (
+            <circle
+              data-arrow-handle="headSize"
+              cx={hsHandleX}
+              cy={hsHandleY}
+              r={handleRadius}
+              fill="#f5c542"
+              stroke="#c49b1a"
+              strokeWidth={1}
+              vectorEffect="non-scaling-stroke"
+              style={{ cursor: 'ew-resize' }}
+              pointerEvents="auto"
+            />
+          )
+        }
+
         if (isCurved) {
-          const cp1x = ox + arrow.cp1!.x
-          const cp1y = oy + arrow.cp1!.y
-          const cp2x = ox + arrow.cp2!.x
-          const cp2y = oy + arrow.cp2!.y
+          const cp1x = ox + obj.cp1!.x
+          const cp1y = oy + obj.cp1!.y
+          const cp2x = ox + obj.cp2!.x
+          const cp2y = oy + obj.cp2!.y
 
           selectionEl = (
             <>
@@ -113,7 +119,7 @@ export function SelectionOverlay() {
               {endpointHandles}
               {/* Control point handles */}
               <circle
-                data-arrow-handle="cp1"
+                {...{ [handleAttr]: 'cp1' }}
                 cx={cp1x} cy={cp1y} r={handleRadius}
                 fill="#4a90d9" stroke="white" strokeWidth={1}
                 vectorEffect="non-scaling-stroke"
@@ -121,7 +127,7 @@ export function SelectionOverlay() {
                 pointerEvents="auto"
               />
               <circle
-                data-arrow-handle="cp2"
+                {...{ [handleAttr]: 'cp2' }}
                 cx={cp2x} cy={cp2y} r={handleRadius}
                 fill="#4a90d9" stroke="white" strokeWidth={1}
                 vectorEffect="non-scaling-stroke"
@@ -132,7 +138,7 @@ export function SelectionOverlay() {
             </>
           )
         } else {
-          // Straight arrow — show midpoint indicator
+          // Straight — show midpoint indicator
           const mx = (p1x + p2x) / 2
           const my = (p1y + p2y) / 2
 
@@ -141,7 +147,7 @@ export function SelectionOverlay() {
               {endpointHandles}
               <circle
                 className="arrow-midpoint-indicator"
-                data-arrow-handle="midpoint"
+                {...{ [handleAttr]: 'midpoint' }}
                 cx={mx} cy={my} r={handleRadius}
                 fill="transparent" stroke="transparent" strokeWidth={1}
                 vectorEffect="non-scaling-stroke"
@@ -153,7 +159,7 @@ export function SelectionOverlay() {
           )
         }
       } else {
-        // Multi-selection or non-arrow: existing bounding box behavior
+        // Multi-selection or non-line/arrow: existing bounding box behavior
         let minX = Infinity
         let minY = Infinity
         let maxX = -Infinity

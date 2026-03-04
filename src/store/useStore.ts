@@ -3,7 +3,7 @@ import type { SceneObject, Point, ViewportTransform, ToolType, ShapePreview, Bou
 import { generateId } from '../utils/idGenerator'
 import { applyResize } from '../utils/resize'
 import { getWorldBounds, boundingBoxFromLine, boundingBoxFromCurvedArrow } from '../utils/boundingBox'
-import { generateRoughArrow, generateRoughCurvedArrow } from '../rendering/roughPath'
+import { generateRoughLine, generateRoughCurvedLine, generateRoughArrow, generateRoughCurvedArrow } from '../rendering/roughPath'
 
 const STYLES_KEY = 'doodler-styles'
 const DRAWING_KEY = 'doodler-drawing'
@@ -136,6 +136,7 @@ interface DoodlerState {
   setEditingTextId: (id: string | null) => void
   clearDrawing: () => void
   updateObjectStyles: (ids: Set<string>, styles: { color?: string; fillColor?: string; strokeWidth?: number; opacity?: number }) => void
+  updateLineGeometry: (id: string, updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }>) => void
   updateArrowGeometry: (id: string, updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }>) => void
   updateArrowHeadSize: (ids: Set<string>, size: number) => void
 }
@@ -396,6 +397,26 @@ export const useStore = create<DoodlerState>((set) => ({
         return updated as SceneObject
       }),
     })),
+  updateLineGeometry: (id, updates) =>
+    set((state) => ({
+      objects: state.objects.map((o) => {
+        if (o.id !== id || o.type !== 'line') return o
+        const line = { ...o, ...updates }
+        if (line.cp1 && line.cp2) {
+          return {
+            ...line,
+            pathData: generateRoughCurvedLine(line.x1, line.y1, line.cp1.x, line.cp1.y, line.cp2.x, line.cp2.y, line.x2, line.y2),
+            boundingBox: boundingBoxFromCurvedArrow(line.x1, line.y1, line.cp1.x, line.cp1.y, line.cp2.x, line.cp2.y, line.x2, line.y2),
+          }
+        }
+        return {
+          ...line,
+          pathData: generateRoughLine(line.x1, line.y1, line.x2, line.y2),
+          boundingBox: boundingBoxFromLine(line.x1, line.y1, line.x2, line.y2),
+        }
+      }),
+    })),
+
   updateArrowGeometry: (id, updates) =>
     set((state) => ({
       objects: state.objects.map((o) => {

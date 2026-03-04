@@ -1,5 +1,5 @@
 import type { SceneObject, Point } from '../types/scene'
-import { generateRoughRect, generateRoughEllipse, generateRoughLine, generateRoughArrow, generateRoughCurvedArrow } from '../rendering/roughPath'
+import { generateRoughRect, generateRoughEllipse, generateRoughLine, generateRoughCurvedLine, generateRoughArrow, generateRoughCurvedArrow } from '../rendering/roughPath'
 import { generateStrokePathData } from '../rendering/sketchyPath'
 import { boundingBoxFromRect, boundingBoxFromLine, boundingBoxFromCurvedArrow, computeBoundingBox } from './boundingBox'
 import { measureTextBounds } from './measureText'
@@ -57,6 +57,28 @@ export function applyResize(obj: SceneObject, anchor: Point, scaleX: number, sca
       const wp2 = { x: obj.position.x + obj.x2, y: obj.position.y + obj.y2 }
       const np1 = scalePoint(wp1, anchor, scaleX, scaleY)
       const np2 = scalePoint(wp2, anchor, scaleX, scaleY)
+
+      if (obj.cp1 && obj.cp2) {
+        const wcp1 = { x: obj.position.x + obj.cp1.x, y: obj.position.y + obj.cp1.y }
+        const wcp2 = { x: obj.position.x + obj.cp2.x, y: obj.position.y + obj.cp2.y }
+        const ncp1 = scalePoint(wcp1, anchor, scaleX, scaleY)
+        const ncp2 = scalePoint(wcp2, anchor, scaleX, scaleY)
+        const ox = Math.min(np1.x, np2.x, ncp1.x, ncp2.x)
+        const oy = Math.min(np1.y, np2.y, ncp1.y, ncp2.y)
+        const lx1 = np1.x - ox, ly1 = np1.y - oy
+        const lx2 = np2.x - ox, ly2 = np2.y - oy
+        const lcp1 = { x: ncp1.x - ox, y: ncp1.y - oy }
+        const lcp2 = { x: ncp2.x - ox, y: ncp2.y - oy }
+        return {
+          ...obj,
+          x1: lx1, y1: ly1, x2: lx2, y2: ly2,
+          cp1: lcp1, cp2: lcp2,
+          position: { x: ox, y: oy },
+          pathData: generateRoughCurvedLine(lx1, ly1, lcp1.x, lcp1.y, lcp2.x, lcp2.y, lx2, ly2),
+          boundingBox: boundingBoxFromCurvedArrow(lx1, ly1, lcp1.x, lcp1.y, lcp2.x, lcp2.y, lx2, ly2),
+        }
+      }
+
       const ox = Math.min(np1.x, np2.x)
       const oy = Math.min(np1.y, np2.y)
       const lx1 = np1.x - ox

@@ -2,10 +2,10 @@ import { useCallback, useRef } from 'react'
 import { useStore } from '../store/useStore'
 import { getObjectIdFromEvent } from '../utils/hitTest'
 import { boxesIntersect, getWorldBounds } from '../utils/boundingBox'
-import type { Point, SceneObject, ArrowShape, BoundingBox } from '../types/scene'
+import type { Point, SceneObject, ArrowShape, LineShape, BoundingBox } from '../types/scene'
 
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se'
-type ArrowHandleType = 'p1' | 'p2' | 'cp1' | 'cp2' | 'midpoint' | 'headSize'
+type LineArrowHandleType = 'p1' | 'p2' | 'cp1' | 'cp2' | 'midpoint' | 'headSize'
 
 export function usePointerTool() {
   const isDragging = useRef(false)
@@ -24,11 +24,12 @@ export function usePointerTool() {
   const resizeOriginalCorner = useRef<Point | null>(null)
   const resizeSnapshots = useRef<Map<string, SceneObject> | null>(null)
 
-  // Arrow handle drag state
-  const arrowHandleDrag = useRef<{
-    arrowId: string
-    handleType: ArrowHandleType
-    snapshot: ArrowShape
+  // Line/Arrow handle drag state
+  const lineArrowHandleDrag = useRef<{
+    objId: string
+    objType: 'arrow' | 'line'
+    handleType: LineArrowHandleType
+    snapshot: ArrowShape | LineShape
     startPoint: Point
   } | null>(null)
 
@@ -37,31 +38,39 @@ export function usePointerTool() {
 
     shiftOnDown.current = e.shiftKey
 
-    // Check for arrow handle first
     const target = e.target as SVGElement
-    const arrowHandleAttr = target.closest('[data-arrow-handle]')?.getAttribute('data-arrow-handle') as ArrowHandleType | null
-    if (arrowHandleAttr) {
-      const { objects, selectedIds } = useStore.getState()
-      const arrowId = [...selectedIds][0]
-      const arrow = objects.find((o) => o.id === arrowId && o.type === 'arrow') as ArrowShape | undefined
-      if (!arrow) return
 
-      if (arrowHandleAttr === 'midpoint') {
-        // Break straight arrow into curve — place both control points at midpoint
-        const mx = (arrow.x1 + arrow.x2) / 2
-        const my = (arrow.y1 + arrow.y2) / 2
-        useStore.getState().updateArrowGeometry(arrowId, {
-          cp1: { x: mx, y: my },
-          cp2: { x: mx, y: my },
-        })
+    // Check for arrow handle
+    const arrowHandleAttr = target.closest('[data-arrow-handle]')?.getAttribute('data-arrow-handle') as LineArrowHandleType | null
+    // Check for line handle
+    const lineHandleAttr = target.closest('[data-line-handle]')?.getAttribute('data-line-handle') as LineArrowHandleType | null
+
+    const handleAttrValue = arrowHandleAttr || lineHandleAttr
+    const handleObjType: 'arrow' | 'line' = arrowHandleAttr ? 'arrow' : 'line'
+
+    if (handleAttrValue) {
+      const { objects, selectedIds } = useStore.getState()
+      const objId = [...selectedIds][0]
+      const obj = objects.find((o) => o.id === objId && o.type === handleObjType) as (ArrowShape | LineShape) | undefined
+      if (!obj) return
+
+      if (handleAttrValue === 'midpoint') {
+        // Break straight line/arrow into curve — place both control points at midpoint
+        const mx = (obj.x1 + obj.x2) / 2
+        const my = (obj.y1 + obj.y2) / 2
+        const updateFn = handleObjType === 'arrow'
+          ? useStore.getState().updateArrowGeometry
+          : useStore.getState().updateLineGeometry
+        updateFn(objId, { cp1: { x: mx, y: my }, cp2: { x: mx, y: my } })
         return
       }
 
-      // Start arrow handle drag
-      arrowHandleDrag.current = {
-        arrowId,
-        handleType: arrowHandleAttr,
-        snapshot: structuredClone(arrow) as ArrowShape,
+      // Start handle drag
+      lineArrowHandleDrag.current = {
+        objId,
+        objType: handleObjType,
+        handleType: handleAttrValue,
+        snapshot: structuredClone(obj) as ArrowShape | LineShape,
         startPoint: scenePoint,
       }
       ;(e.target as SVGElement).setPointerCapture(e.pointerId)
@@ -69,17 +78,17 @@ export function usePointerTool() {
     }
 
     // Check for resize handle
-    const handleAttr = target.closest('[data-resize-handle]')?.getAttribute('data-resize-handle') as ResizeHandle | null
-    if (handleAttr) {
+    const resizeAttr = target.closest('[data-resize-handle]')?.getAttribute('data-resize-handle') as ResizeHandle | null
+    if (resizeAttr) {
       isResizing.current = true
-      resizeHandle.current = handleAttr
+      resizeHandle.current = resizeAttr
 
       // Compute selection bounding box for anchor
       const { objects, selectedIds } = useStore.getState()
       const selected = objects.filter((o) => selectedIds.has(o.id))
       if (selected.length === 0) return
 
-      const padding = 8
+      const pad = 8
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
       for (const obj of selected) {
         const bb = obj.boundingBox
@@ -91,14 +100,14 @@ export function usePointerTool() {
 
       // Anchor is opposite corner, original corner is the handle corner
       const corners: Record<ResizeHandle, { anchor: Point; corner: Point }> = {
-        nw: { anchor: { x: maxX + padding, y: maxY + padding }, corner: { x: minX - padding, y: minY - padding } },
-        ne: { anchor: { x: minX - padding, y: maxY + padding }, corner: { x: maxX + padding, y: minY - padding } },
-        sw: { anchor: { x: maxX + padding, y: minY - padding }, corner: { x: minX - padding, y: maxY + padding } },
-        se: { anchor: { x: minX - padding, y: minY - padding }, corner: { x: maxX + padding, y: maxY + padding } },
+        nw: { anchor: { x: maxX + pad, y: maxY + pad }, corner: { x: minX - pad, y: minY - pad } },
+        ne: { anchor: { x: minX - pad, y: maxY + pad }, corner: { x: maxX + pad, y: minY - pad } },
+        sw: { anchor: { x: maxX + pad, y: minY - pad }, corner: { x: minX - pad, y: maxY + pad } },
+        se: { anchor: { x: minX - pad, y: minY - pad }, corner: { x: maxX + pad, y: maxY + pad } },
       }
 
-      resizeAnchor.current = corners[handleAttr].anchor
-      resizeOriginalCorner.current = corners[handleAttr].corner
+      resizeAnchor.current = corners[resizeAttr].anchor
+      resizeOriginalCorner.current = corners[resizeAttr].corner
       resizeSnapshots.current = new Map(selected.map((o) => [o.id, structuredClone(o)]))
       ;(e.target as SVGElement).setPointerCapture(e.pointerId)
       return
@@ -135,26 +144,24 @@ export function usePointerTool() {
   }, [])
 
   const onPointerMove = useCallback((_e: React.PointerEvent<SVGSVGElement>, scenePoint: Point) => {
-    // Arrow handle drag
-    if (arrowHandleDrag.current) {
-      const { arrowId, handleType, snapshot, startPoint } = arrowHandleDrag.current
+    // Line/Arrow handle drag
+    if (lineArrowHandleDrag.current) {
+      const { objId, objType, handleType, snapshot, startPoint } = lineArrowHandleDrag.current
 
-      // Head size drag — measure distance from pointer to arrowhead tip
-      if (handleType === 'headSize') {
+      // Arrow head size drag
+      if (handleType === 'headSize' && objType === 'arrow') {
         const tipX = snapshot.position.x + snapshot.x2
         const tipY = snapshot.position.y + snapshot.y2
         const dist = Math.sqrt((scenePoint.x - tipX) ** 2 + (scenePoint.y - tipY) ** 2)
         const newSize = Math.max(4, Math.min(64, Math.round(dist)))
-        useStore.getState().updateArrowHeadSize(new Set([arrowId]), newSize)
+        useStore.getState().updateArrowHeadSize(new Set([objId]), newSize)
         return
       }
 
       const dx = scenePoint.x - startPoint.x
       const dy = scenePoint.y - startPoint.y
 
-      // Always pass all coordinates from snapshot so updateArrowGeometry
-      // gets a consistent set (it merges into current state which may
-      // have been re-normalized from a previous frame).
+      // Always pass all coordinates from snapshot for consistency
       const updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }> = {
         x1: snapshot.x1,
         y1: snapshot.y1,
@@ -187,7 +194,10 @@ export function usePointerTool() {
           break
       }
 
-      useStore.getState().updateArrowGeometry(arrowId, updates)
+      const updateFn = objType === 'arrow'
+        ? useStore.getState().updateArrowGeometry
+        : useStore.getState().updateLineGeometry
+      updateFn(objId, updates)
       return
     }
 
@@ -237,9 +247,9 @@ export function usePointerTool() {
   }, [])
 
   const onPointerUp = useCallback(() => {
-    // Arrow handle drag cleanup
-    if (arrowHandleDrag.current) {
-      arrowHandleDrag.current = null
+    // Line/Arrow handle drag cleanup
+    if (lineArrowHandleDrag.current) {
+      lineArrowHandleDrag.current = null
       return
     }
 
