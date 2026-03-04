@@ -2,17 +2,22 @@ import { memo } from 'react'
 import { useStore } from '../../store/useStore'
 import type { SceneObject, TextObject, RectangleShape, EllipseShape, GroupObject } from '../../types/scene'
 import { generateRoughHatchLines } from '../../rendering/roughPath'
+import { DEFAULT_FONT_FAMILY, getFontFamilyCss } from '../../fonts/fontRegistry'
 
 const LINE_HEIGHT_FACTOR = 1.3
 
 const TextElement = memo(function TextElement({ obj }: { obj: TextObject }) {
   const lines = obj.text.split('\n')
   const lineHeight = obj.fontSize * LINE_HEIGHT_FACTOR
+  const fontCss = getFontFamilyCss(obj.fontFamily ?? DEFAULT_FONT_FAMILY)
 
   return (
     <text
-      fontFamily="'Humor Sans', cursive"
+      fontFamily={fontCss}
       fontSize={obj.fontSize}
+      fontWeight={obj.bold ? 'bold' : 'normal'}
+      fontStyle={obj.italic ? 'italic' : 'normal'}
+      textDecoration={obj.underline ? 'underline' : undefined}
       fill={obj.color}
       transform={`translate(${obj.position.x}, ${obj.position.y})`}
       data-object-id={obj.id}
@@ -122,10 +127,14 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
 function ChildTextElement({ obj }: { obj: TextObject }) {
   const lines = obj.text.split('\n')
   const lineHeight = obj.fontSize * LINE_HEIGHT_FACTOR
+  const fontCss = getFontFamilyCss(obj.fontFamily ?? DEFAULT_FONT_FAMILY)
   return (
     <text
-      fontFamily="'Humor Sans', cursive"
+      fontFamily={fontCss}
       fontSize={obj.fontSize}
+      fontWeight={obj.bold ? 'bold' : 'normal'}
+      fontStyle={obj.italic ? 'italic' : 'normal'}
+      textDecoration={obj.underline ? 'underline' : undefined}
       fill={obj.color}
       transform={`translate(${obj.position.x}, ${obj.position.y})`}
       style={{ cursor: 'default' }}

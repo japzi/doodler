@@ -1,4 +1,5 @@
 import type { BoundingBox } from '../types/scene'
+import { DEFAULT_FONT_FAMILY, getFontFamilyCss } from '../fonts/fontRegistry'
 
 let cachedCanvas: HTMLCanvasElement | null = null
 
@@ -11,9 +12,9 @@ function getCanvas(): CanvasRenderingContext2D {
 
 const LINE_HEIGHT_FACTOR = 1.3
 
-export function measureTextBounds(text: string, fontSize: number): BoundingBox {
+export function measureTextBounds(text: string, fontSize: number, fontFamily: string = DEFAULT_FONT_FAMILY, bold: boolean = false, italic: boolean = false): BoundingBox {
   const ctx = getCanvas()
-  ctx.font = `${fontSize}px 'Humor Sans', cursive`
+  ctx.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontSize}px ${getFontFamilyCss(fontFamily)}`
 
   const lines = text.split('\n')
   let maxWidth = 0

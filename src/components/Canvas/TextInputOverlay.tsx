@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useStore } from '../../store/useStore'
 import { generateId } from '../../utils/idGenerator'
 import { measureTextBounds } from '../../utils/measureText'
+import { DEFAULT_FONT_FAMILY, getFontFamilyCss } from '../../fonts/fontRegistry'
 import type { TextObject } from '../../types/scene'
 
 export function TextInputOverlay() {
@@ -9,6 +10,10 @@ export function TextInputOverlay() {
   const editingTextId = useStore((s) => s.editingTextId)
   const viewport = useStore((s) => s.viewport)
   const storeFontSize = useStore((s) => s.fontSize)
+  const storeFontFamily = useStore((s) => s.fontFamily)
+  const storeBold = useStore((s) => s.bold)
+  const storeItalic = useStore((s) => s.italic)
+  const storeUnderline = useStore((s) => s.underline)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const committedRef = useRef(false)
 
@@ -23,6 +28,10 @@ export function TextInputOverlay() {
   const sceneX = editingObject ? editingObject.position.x : activeTextInput?.x ?? 0
   const sceneY = editingObject ? editingObject.position.y : activeTextInput?.y ?? 0
   const fontSize = editingObject?.fontSize ?? storeFontSize
+  const fontFamily = editingObject?.fontFamily ?? storeFontFamily
+  const bold = editingObject?.bold ?? storeBold
+  const italic = editingObject?.italic ?? storeItalic
+  const underline = editingObject?.underline ?? storeUnderline
 
   const screenX = sceneX * viewport.scale + viewport.offsetX
   const screenY = sceneY * viewport.scale + viewport.offsetY
@@ -42,7 +51,9 @@ export function TextInputOverlay() {
       if (text === '') {
         deleteObjects(new Set([editingTextId]))
       } else {
-        const bbox = measureTextBounds(text, fontSize)
+        const editObj = useStore.getState().objects.find((o) => o.id === editingTextId) as TextObject | undefined
+        const editFont = editObj?.fontFamily ?? DEFAULT_FONT_FAMILY
+        const bbox = measureTextBounds(text, fontSize, editFont, editObj?.bold ?? false, editObj?.italic ?? false)
         updateTextObject(editingTextId, text, bbox)
       }
       setEditingTextId(null)
@@ -50,12 +61,17 @@ export function TextInputOverlay() {
       if (text !== '') {
         const state = useStore.getState()
         const currentFontSize = state.fontSize
-        const bbox = measureTextBounds(text, currentFontSize)
+        const currentFontFamily = state.fontFamily
+        const bbox = measureTextBounds(text, currentFontSize, currentFontFamily, state.bold, state.italic)
         const obj: TextObject = {
           type: 'text',
           id: generateId(),
           text,
           fontSize: currentFontSize,
+          fontFamily: currentFontFamily,
+          bold: state.bold || undefined,
+          italic: state.italic || undefined,
+          underline: state.underline || undefined,
           color: state.strokeColor,
           opacity: state.opacity,
           position: { x: activeTextInput.x, y: activeTextInput.y },
@@ -117,7 +133,8 @@ export function TextInputOverlay() {
         position: 'fixed',
         left: screenX,
         top: screenY - scaledFontSize,
-        font: `${scaledFontSize}px 'Humor Sans', cursive`,
+        font: `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${scaledFontSize}px ${getFontFamilyCss(fontFamily)}`,
+        textDecoration: underline ? 'underline' : 'none',
         color: editingObject?.color ?? useStore.getState().strokeColor,
         background: 'transparent',
         border: '1px dashed #4a90d9',

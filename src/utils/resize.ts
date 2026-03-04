@@ -194,7 +194,7 @@ export function applyResize(obj: SceneObject, anchor: Point, scaleX: number, sca
       const wp = { x: obj.position.x, y: obj.position.y }
       const sp = scalePoint(wp, anchor, scaleX, scaleY)
       const newFontSize = Math.max(8, Math.round(obj.fontSize * Math.abs(scaleY)))
-      const newBb = measureTextBounds(obj.text, newFontSize)
+      const newBb = measureTextBounds(obj.text, newFontSize, obj.fontFamily, obj.bold ?? false, obj.italic ?? false)
       return {
         ...obj,
         position: sp,

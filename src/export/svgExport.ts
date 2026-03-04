@@ -1,21 +1,72 @@
 import type { SceneObject, TextObject, RectangleShape, EllipseShape } from '../types/scene'
 import { generateRoughHatchLines } from '../rendering/roughPath'
+import { DEFAULT_FONT_FAMILY, getPresetFont, isPresetFont, getFontFamilyCss } from '../fonts/fontRegistry'
 
 const LINE_HEIGHT_FACTOR = 1.3
 
-let cachedFontBase64: string | null = null
+const fontBase64Cache = new Map<string, string>()
 
-async function getFontBase64(): Promise<string> {
-  if (cachedFontBase64) return cachedFontBase64
-  const response = await fetch('/fonts/HumorSans.ttf')
+async function fetchFontAsBase64(url: string): Promise<string> {
+  if (fontBase64Cache.has(url)) return fontBase64Cache.get(url)!
+  const response = await fetch(url)
   const buffer = await response.arrayBuffer()
   const bytes = new Uint8Array(buffer)
   let binary = ''
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i])
   }
-  cachedFontBase64 = btoa(binary)
-  return cachedFontBase64
+  const base64 = btoa(binary)
+  fontBase64Cache.set(url, base64)
+  return base64
+}
+
+function collectFontFamilies(objects: SceneObject[]): Set<string> {
+  const families = new Set<string>()
+  for (const obj of objects) {
+    if (obj.type === 'text') {
+      families.add(obj.fontFamily ?? DEFAULT_FONT_FAMILY)
+    } else if (obj.type === 'group') {
+      for (const family of collectFontFamilies(obj.children)) {
+        families.add(family)
+      }
+    }
+  }
+  return families
+}
+
+async function buildFontFaceRules(families: Set<string>): Promise<string> {
+  const rules: string[] = []
+  for (const family of families) {
+    if (isPresetFont(family)) {
+      const preset = getPresetFont(family)!
+      const base64 = await fetchFontAsBase64(preset.file)
+      rules.push(`    @font-face {\n      font-family: '${family}';\n      src: url('data:font/truetype;base64,${base64}') format('truetype');\n    }`)
+    } else {
+      // Google Font: fetch CSS, extract font URL, fetch binary, embed
+      try {
+        const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}&display=swap`
+        const cssResp = await fetch(cssUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+        const cssText = await cssResp.text()
+        const urlMatch = cssText.match(/url\((https:\/\/[^)]+)\)/)
+        if (urlMatch) {
+          const fontUrl = urlMatch[1]
+          const fontResp = await fetch(fontUrl)
+          const fontBuf = await fontResp.arrayBuffer()
+          const fontBytes = new Uint8Array(fontBuf)
+          let bin = ''
+          for (let i = 0; i < fontBytes.length; i++) {
+            bin += String.fromCharCode(fontBytes[i])
+          }
+          const b64 = btoa(bin)
+          const format = fontUrl.includes('.woff2') ? 'woff2' : fontUrl.includes('.woff') ? 'woff' : 'truetype'
+          rules.push(`    @font-face {\n      font-family: '${family}';\n      src: url('data:font/${format};base64,${b64}') format('${format}');\n    }`)
+        }
+      } catch {
+        // Skip font embedding if fetch fails
+      }
+    }
+  }
+  return rules.join('\n')
 }
 
 function escapeXml(s: string): string {
@@ -123,7 +174,11 @@ function serializeTextObject(obj: TextObject, indent: string = '  '): string {
     })
     .join('\n')
 
-  return `${indent}<text font-family="'Humor Sans', cursive" font-size="${obj.fontSize}" fill="${obj.color}"${transform}>\n${tspans}\n${indent}</text>`
+  const fontCss = getFontFamilyCss(obj.fontFamily ?? DEFAULT_FONT_FAMILY)
+  const boldAttr = obj.bold ? ' font-weight="bold"' : ''
+  const italicAttr = obj.italic ? ' font-style="italic"' : ''
+  const underlineAttr = obj.underline ? ' text-decoration="underline"' : ''
+  return `${indent}<text font-family="${fontCss}" font-size="${obj.fontSize}"${boldAttr}${italicAttr}${underlineAttr} fill="${obj.color}"${transform}>\n${tspans}\n${indent}</text>`
 }
 
 export async function serializeToSvg(objects: SceneObject[]): Promise<string> {
@@ -151,13 +206,13 @@ export async function serializeToSvg(objects: SceneObject[]): Promise<string> {
   const vbW = maxX - minX + padding * 2
   const vbH = maxY - minY + padding * 2
 
-  const hasTextRecursive = (objs: SceneObject[]): boolean =>
-    objs.some((o) => o.type === 'text' || (o.type === 'group' && hasTextRecursive(o.children)))
-  const hasText = hasTextRecursive(objects)
+  const fontFamilies = collectFontFamilies(objects)
   let styleBlock = ''
-  if (hasText) {
-    const fontBase64 = await getFontBase64()
-    styleBlock = `  <style>\n    @font-face {\n      font-family: 'Humor Sans';\n      src: url('data:font/truetype;base64,${fontBase64}') format('truetype');\n    }\n  </style>\n`
+  if (fontFamilies.size > 0) {
+    const fontRules = await buildFontFaceRules(fontFamilies)
+    if (fontRules) {
+      styleBlock = `  <style>\n${fontRules}\n  </style>\n`
+    }
   }
 
   const elements = objects

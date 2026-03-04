@@ -97,6 +97,10 @@ export interface TextObject {
   id: string
   text: string
   fontSize: number
+  fontFamily?: string
+  bold?: boolean
+  italic?: boolean
+  underline?: boolean
   color: string
   opacity?: number
   position: { x: number; y: number }

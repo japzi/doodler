@@ -5,6 +5,8 @@ import { exportProject, importProject } from '../../store/useStore'
 import { copySvgToClipboard, downloadSvg } from '../../export/svgExport'
 import { exportPng } from '../../export/pngExport'
 import { ColorPicker } from './ColorPicker'
+import { FontPicker } from './FontPicker'
+import { DEFAULT_FONT_FAMILY } from '../../fonts/fontRegistry'
 
 export function Toolbar() {
   const activeTool = useStore((s) => s.activeTool)
@@ -13,12 +15,20 @@ export function Toolbar() {
   const strokeWidth = useStore((s) => s.strokeWidth)
   const opacity = useStore((s) => s.opacity)
   const fontSize = useStore((s) => s.fontSize)
+  const fontFamily = useStore((s) => s.fontFamily)
+  const bold = useStore((s) => s.bold)
+  const italic = useStore((s) => s.italic)
+  const underline = useStore((s) => s.underline)
   const setActiveTool = useStore((s) => s.setActiveTool)
   const setStrokeColor = useStore((s) => s.setStrokeColor)
   const setFillColor = useStore((s) => s.setFillColor)
   const setStrokeWidth = useStore((s) => s.setStrokeWidth)
   const setOpacity = useStore((s) => s.setOpacity)
   const setFontSize = useStore((s) => s.setFontSize)
+  const setFontFamily = useStore((s) => s.setFontFamily)
+  const setBold = useStore((s) => s.setBold)
+  const setItalic = useStore((s) => s.setItalic)
+  const setUnderline = useStore((s) => s.setUnderline)
   const shadowEnabled = useStore((s) => s.shadowEnabled)
   const shadowOffset = useStore((s) => s.shadowOffset)
   const setShadowEnabled = useStore((s) => s.setShadowEnabled)
@@ -36,6 +46,7 @@ export function Toolbar() {
   const selectedObjects = hasSelection ? objects.filter((o) => selectedIds.has(o.id)) : []
   const selectedHasFill = selectedObjects.some((o) => o.type === 'rectangle' || o.type === 'ellipse')
   const selectedHasStrokeWidth = selectedObjects.some((o) => o.type !== 'text')
+  const selectedHasText = selectedObjects.some((o) => o.type === 'text')
   // Sync toolbar to first selected object's styles
   useEffect(() => {
     if (!hasSelection) return
@@ -49,6 +60,13 @@ export function Toolbar() {
     if (first.type === 'rectangle' || first.type === 'ellipse') {
       setShadowEnabled(!!first.shadow)
       if (first.shadow) setShadowOffset(first.shadow.offset)
+    }
+    if (first.type === 'text') {
+      setFontFamily(first.fontFamily ?? DEFAULT_FONT_FAMILY)
+      setFontSize(first.fontSize)
+      setBold(first.bold ?? false)
+      setItalic(first.italic ?? false)
+      setUnderline(first.underline ?? false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIds])
@@ -275,19 +293,63 @@ export function Toolbar() {
           </>
         )}
 
-        {activeTool === 'text' && (
+        {(activeTool === 'text' || (activeTool === 'pointer' && selectedHasText)) && (
           <>
             <div className="toolbar__divider" />
+            <FontPicker
+              value={fontFamily}
+              onChange={(family) => {
+                setFontFamily(family)
+                if (hasSelection) updateObjectStyles(selectedIds, { fontFamily: family })
+              }}
+            />
             <select
               className="toolbar__font-size-select"
               value={fontSize}
-              onChange={(e) => setFontSize(Number(e.target.value))}
+              onChange={(e) => {
+                const size = Number(e.target.value)
+                setFontSize(size)
+                if (hasSelection) updateObjectStyles(selectedIds, { fontSize: size })
+              }}
               data-tooltip="Font size"
             >
               {[14, 18, 24, 32, 48, 64].map((size) => (
                 <option key={size} value={size}>{size}px</option>
               ))}
             </select>
+            <button
+              className={`toolbar__button ${bold ? 'toolbar__button--active' : ''}`}
+              onClick={() => {
+                const next = !bold
+                setBold(next)
+                if (hasSelection) updateObjectStyles(selectedIds, { bold: next })
+              }}
+              data-tooltip="Bold"
+            >
+              <strong>B</strong>
+            </button>
+            <button
+              className={`toolbar__button ${italic ? 'toolbar__button--active' : ''}`}
+              onClick={() => {
+                const next = !italic
+                setItalic(next)
+                if (hasSelection) updateObjectStyles(selectedIds, { italic: next })
+              }}
+              data-tooltip="Italic"
+            >
+              <em>I</em>
+            </button>
+            <button
+              className={`toolbar__button ${underline ? 'toolbar__button--active' : ''}`}
+              onClick={() => {
+                const next = !underline
+                setUnderline(next)
+                if (hasSelection) updateObjectStyles(selectedIds, { underline: next })
+              }}
+              data-tooltip="Underline"
+            >
+              <u>U</u>
+            </button>
           </>
         )}
 
