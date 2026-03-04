@@ -46,7 +46,7 @@ export function Toolbar() {
     setOpacity(first.opacity ?? 1)
     if ('strokeWidth' in first && first.strokeWidth !== undefined) setStrokeWidth(first.strokeWidth)
     if ('fillColor' in first && first.fillColor !== undefined) setFillColor(first.fillColor)
-    if ((first.type === 'rectangle' || first.type === 'ellipse') && 'shadow' in first) {
+    if (first.type === 'rectangle' || first.type === 'ellipse') {
       setShadowEnabled(!!first.shadow)
       if (first.shadow) setShadowOffset(first.shadow.offset)
     }
