@@ -37,10 +37,13 @@ function FillShape({ obj }: { obj: RectangleShape | EllipseShape }) {
   return <path d={obj.pathData} fill={fillColor} stroke="none" opacity={opacity !== 1 ? opacity : undefined} />
 }
 
+const HIT_TARGET_WIDTH = 20
+
 const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObject, TextObject> }) {
   const isShape = obj.type !== 'pen'
   const strokeWidth = 'strokeWidth' in obj ? (obj.strokeWidth ?? 2) : 2
   const hasFill = (obj.type === 'rectangle' || obj.type === 'ellipse') && obj.fillColor && obj.fillColor !== 'none' && obj.fillColor !== 'transparent'
+  const needsHitTarget = isShape && strokeWidth < HIT_TARGET_WIDTH
 
   if (hasFill) {
     return (
@@ -61,15 +64,26 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
   }
 
   return (
-    <path
-      d={obj.pathData}
-      fill={isShape ? 'none' : obj.color}
-      stroke={isShape ? obj.color : undefined}
-      strokeWidth={isShape ? strokeWidth : undefined}
+    <g
       transform={`translate(${obj.position.x}, ${obj.position.y})`}
       data-object-id={obj.id}
       style={{ cursor: 'default' }}
-    />
+    >
+      {needsHitTarget && (
+        <path
+          d={obj.pathData}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={HIT_TARGET_WIDTH}
+        />
+      )}
+      <path
+        d={obj.pathData}
+        fill={isShape ? 'none' : obj.color}
+        stroke={isShape ? obj.color : undefined}
+        strokeWidth={isShape ? strokeWidth : undefined}
+      />
+    </g>
   )
 })
 
