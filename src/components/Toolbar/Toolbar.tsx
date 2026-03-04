@@ -19,6 +19,10 @@ export function Toolbar() {
   const setStrokeWidth = useStore((s) => s.setStrokeWidth)
   const setOpacity = useStore((s) => s.setOpacity)
   const setFontSize = useStore((s) => s.setFontSize)
+  const shadowEnabled = useStore((s) => s.shadowEnabled)
+  const shadowOffset = useStore((s) => s.shadowOffset)
+  const setShadowEnabled = useStore((s) => s.setShadowEnabled)
+  const setShadowOffset = useStore((s) => s.setShadowOffset)
   const clearDrawing = useStore((s) => s.clearDrawing)
   const updateObjectStyles = useStore((s) => s.updateObjectStyles)
   const selectedIds = useStore((s) => s.selectedIds)
@@ -42,6 +46,10 @@ export function Toolbar() {
     setOpacity(first.opacity ?? 1)
     if ('strokeWidth' in first && first.strokeWidth !== undefined) setStrokeWidth(first.strokeWidth)
     if ('fillColor' in first && first.fillColor !== undefined) setFillColor(first.fillColor)
+    if ((first.type === 'rectangle' || first.type === 'ellipse') && 'shadow' in first) {
+      setShadowEnabled(!!first.shadow)
+      if (first.shadow) setShadowOffset(first.shadow.offset)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIds])
 
@@ -224,6 +232,47 @@ export function Toolbar() {
             />
             <span className="toolbar__opacity-label">{Math.round(opacity * 100)}%</span>
           </div>
+        )}
+
+        {(activeTool === 'rectangle' || activeTool === 'ellipse' || (activeTool === 'pointer' && selectedHasFill)) && (
+          <>
+            <button
+              className={`toolbar__button ${shadowEnabled ? 'toolbar__button--active' : ''}`}
+              onClick={() => {
+                const next = !shadowEnabled
+                setShadowEnabled(next)
+                if (hasSelection) {
+                  updateObjectStyles(selectedIds, { shadow: next ? { offset: shadowOffset } : null })
+                }
+              }}
+              data-tooltip="Drop shadow"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="12" height="12" rx="1" />
+                <path d="M9 21h12V9" strokeDasharray="3 2" />
+              </svg>
+            </button>
+            {shadowEnabled && (
+              <div className="toolbar__opacity-control">
+                <input
+                  className="toolbar__opacity-slider"
+                  type="range"
+                  min={2}
+                  max={20}
+                  value={shadowOffset}
+                  onChange={(e) => {
+                    const o = Number(e.target.value)
+                    setShadowOffset(o)
+                    if (hasSelection) {
+                      updateObjectStyles(selectedIds, { shadow: { offset: o } })
+                    }
+                  }}
+                  data-tooltip="Shadow offset"
+                />
+                <span className="toolbar__opacity-label">{shadowOffset}px</span>
+              </div>
+            )}
+          </>
         )}
 
         {activeTool === 'text' && (

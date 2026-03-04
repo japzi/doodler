@@ -34,6 +34,7 @@ export interface RectangleShape {
   fillColor?: string
   strokeWidth?: number
   opacity?: number
+  shadow?: { offset: number }
   pathData: string
   position: { x: number; y: number }
   boundingBox: BoundingBox
@@ -50,6 +51,7 @@ export interface EllipseShape {
   fillColor?: string
   strokeWidth?: number
   opacity?: number
+  shadow?: { offset: number }
   pathData: string
   position: { x: number; y: number }
   boundingBox: BoundingBox

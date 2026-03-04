@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { useStore } from '../../store/useStore'
 import type { SceneObject, TextObject, RectangleShape, EllipseShape, GroupObject } from '../../types/scene'
+import { generateRoughHatchLines } from '../../rendering/roughPath'
 
 const LINE_HEIGHT_FACTOR = 1.3
 
@@ -26,6 +27,34 @@ const TextElement = memo(function TextElement({ obj }: { obj: TextObject }) {
   )
 })
 
+function HatchShadow({ obj }: { obj: RectangleShape | EllipseShape }) {
+  if (!obj.shadow) return null
+  const offset = obj.shadow.offset
+  const clipId = `shadow-clip-${obj.id}`
+  const strokeWidth = obj.strokeWidth ?? 2
+  const hatchPaths = generateRoughHatchLines(obj.x, obj.y, obj.width, obj.height)
+
+  return (
+    <g transform={`translate(${offset}, ${offset})`}>
+      <defs>
+        <clipPath id={clipId}>
+          {obj.type === 'rectangle' ? (
+            <rect x={obj.x} y={obj.y} width={obj.width} height={obj.height} />
+          ) : (
+            <ellipse cx={obj.x + obj.width / 2} cy={obj.y + obj.height / 2} rx={obj.width / 2} ry={obj.height / 2} />
+          )}
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${clipId})`}>
+        {hatchPaths.map((d, i) => (
+          <path key={i} d={d} fill="none" stroke={obj.color} strokeWidth={1.5} />
+        ))}
+      </g>
+      <path d={obj.pathData} fill="none" stroke={obj.color} strokeWidth={strokeWidth} />
+    </g>
+  )
+}
+
 function FillShape({ obj }: { obj: RectangleShape | EllipseShape }) {
   const fillColor = obj.fillColor ?? 'none'
   if (fillColor === 'none' || fillColor === 'transparent') return null
@@ -43,6 +72,7 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
   const isShape = obj.type !== 'pen'
   const strokeWidth = 'strokeWidth' in obj ? (obj.strokeWidth ?? 2) : 2
   const hasFill = (obj.type === 'rectangle' || obj.type === 'ellipse') && obj.fillColor && obj.fillColor !== 'none' && obj.fillColor !== 'transparent'
+  const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse') && obj.shadow
   const needsHitTarget = strokeWidth < HIT_TARGET_WIDTH
 
   if (hasFill) {
@@ -52,6 +82,7 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
         data-object-id={obj.id}
         style={{ cursor: 'default' }}
       >
+        {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape} />}
         <FillShape obj={obj as RectangleShape | EllipseShape} />
         <path
           d={obj.pathData}
@@ -69,6 +100,7 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
       data-object-id={obj.id}
       style={{ cursor: 'default' }}
     >
+      {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape} />}
       {needsHitTarget && (
         <path
           d={obj.pathData}
@@ -111,11 +143,13 @@ function ChildPathElement({ obj }: { obj: Exclude<SceneObject, TextObject | Grou
   const isShape = obj.type !== 'pen'
   const strokeWidth = 'strokeWidth' in obj ? (obj.strokeWidth ?? 2) : 2
   const hasFill = (obj.type === 'rectangle' || obj.type === 'ellipse') && obj.fillColor && obj.fillColor !== 'none' && obj.fillColor !== 'transparent'
+  const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse') && obj.shadow
   const needsHitTarget = strokeWidth < HIT_TARGET_WIDTH
 
   if (hasFill) {
     return (
       <g transform={`translate(${obj.position.x}, ${obj.position.y})`} style={{ cursor: 'default' }}>
+        {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape} />}
         <FillShape obj={obj as RectangleShape | EllipseShape} />
         <path d={obj.pathData} fill="none" stroke={obj.color} strokeWidth={strokeWidth} />
       </g>
@@ -124,6 +158,7 @@ function ChildPathElement({ obj }: { obj: Exclude<SceneObject, TextObject | Grou
 
   return (
     <g transform={`translate(${obj.position.x}, ${obj.position.y})`} style={{ cursor: 'default' }}>
+      {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape} />}
       {needsHitTarget && <path d={obj.pathData} fill="none" stroke="transparent" strokeWidth={HIT_TARGET_WIDTH} />}
       <path
         d={obj.pathData}

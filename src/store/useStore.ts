@@ -63,15 +63,15 @@ export function importProject(file: File): Promise<void> {
   })
 }
 
-function loadStyles(): { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number; arrowHeadSize: number } {
+function loadStyles(): { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number; arrowHeadSize: number; shadowEnabled: boolean; shadowOffset: number } {
   try {
     const raw = localStorage.getItem(STYLES_KEY)
-    if (raw) return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, fontSize: 24, arrowHeadSize: 16, ...JSON.parse(raw) }
+    if (raw) return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, fontSize: 24, arrowHeadSize: 16, shadowEnabled: false, shadowOffset: 8, ...JSON.parse(raw) }
   } catch { /* ignore */ }
-  return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, fontSize: 24, arrowHeadSize: 16 }
+  return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, fontSize: 24, arrowHeadSize: 16, shadowEnabled: false, shadowOffset: 8 }
 }
 
-function persistStyles(state: { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number; arrowHeadSize: number }) {
+function persistStyles(state: { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number; arrowHeadSize: number; shadowEnabled: boolean; shadowOffset: number }) {
   try {
     localStorage.setItem(STYLES_KEY, JSON.stringify(state))
   } catch { /* ignore */ }
@@ -99,6 +99,8 @@ interface DoodlerState {
   opacity: number
   fontSize: number
   arrowHeadSize: number
+  shadowEnabled: boolean
+  shadowOffset: number
 
   // Viewport
   viewport: ViewportTransform
@@ -148,9 +150,11 @@ interface DoodlerState {
   setActiveShapePreview: (preview: ShapePreview | null) => void
   setActiveTextInput: (input: { x: number; y: number } | null) => void
   setEditingTextId: (id: string | null) => void
+  setShadowEnabled: (enabled: boolean) => void
+  setShadowOffset: (offset: number) => void
   toggleGrid: () => void
   clearDrawing: () => void
-  updateObjectStyles: (ids: Set<string>, styles: { color?: string; fillColor?: string; strokeWidth?: number; opacity?: number }) => void
+  updateObjectStyles: (ids: Set<string>, styles: { color?: string; fillColor?: string; strokeWidth?: number; opacity?: number; shadow?: { offset: number } | null }) => void
   updateLineGeometry: (id: string, updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }>) => void
   updateArrowGeometry: (id: string, updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }>) => void
   updateArrowHeadSize: (ids: Set<string>, size: number) => void
@@ -168,6 +172,8 @@ export const useStore = create<DoodlerState>((set) => ({
   opacity: savedStyles.opacity,
   fontSize: savedStyles.fontSize,
   arrowHeadSize: savedStyles.arrowHeadSize,
+  shadowEnabled: savedStyles.shadowEnabled,
+  shadowOffset: savedStyles.shadowOffset,
   viewport: savedDrawing?.viewport ?? { offsetX: 0, offsetY: 0, scale: 1 },
   activeStrokePoints: null,
   activeShapePreview: null,
@@ -452,34 +458,44 @@ export const useStore = create<DoodlerState>((set) => ({
   setMarqueeRect: (rect) => set({ marqueeRect: rect }),
   setActiveTool: (tool) => set({ activeTool: tool, selectedIds: new Set(), activeTextInput: null, editingTextId: null }),
   setStrokeColor: (color) => set((state) => {
-    const styles = { strokeColor: color, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize }
+    const styles = { strokeColor: color, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset }
     persistStyles(styles)
     return { strokeColor: color }
   }),
   setFillColor: (color) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: color, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize }
+    const styles = { strokeColor: state.strokeColor, fillColor: color, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset }
     persistStyles(styles)
     return { fillColor: color }
   }),
   setStrokeWidth: (width) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: width, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: width, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset }
     persistStyles(styles)
     return { strokeWidth: width }
   }),
   setOpacity: (opacity) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset }
     persistStyles(styles)
     return { opacity }
   }),
   setArrowHeadSize: (size) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: size }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: size, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset }
     persistStyles(styles)
     return { arrowHeadSize: size }
   }),
   setFontSize: (size) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: size, arrowHeadSize: state.arrowHeadSize }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: size, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset }
     persistStyles(styles)
     return { fontSize: size }
+  }),
+  setShadowEnabled: (enabled) => set((state) => {
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize, shadowEnabled: enabled, shadowOffset: state.shadowOffset }
+    persistStyles(styles)
+    return { shadowEnabled: enabled }
+  }),
+  setShadowOffset: (offset) => set((state) => {
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: offset }
+    persistStyles(styles)
+    return { shadowOffset: offset }
   }),
   setViewport: (viewport) => set({ viewport }),
   setActiveStrokePoints: (points) => set({ activeStrokePoints: points }),
@@ -499,6 +515,13 @@ export const useStore = create<DoodlerState>((set) => ({
         if (styles.opacity !== undefined) updated.opacity = styles.opacity
         if (styles.strokeWidth !== undefined && o.type !== 'text') updated.strokeWidth = styles.strokeWidth
         if (styles.fillColor !== undefined && (o.type === 'rectangle' || o.type === 'ellipse')) updated.fillColor = styles.fillColor
+        if (styles.shadow !== undefined && (o.type === 'rectangle' || o.type === 'ellipse')) {
+          if (styles.shadow === null) {
+            delete updated.shadow
+          } else {
+            updated.shadow = styles.shadow
+          }
+        }
         return updated as SceneObject
       }
       return {

@@ -62,6 +62,29 @@ export function generateRoughArrow(x1: number, y1: number, x2: number, y2: numbe
   return `${linePath} ${drawableToPaths(head1)} ${drawableToPaths(head2)}`
 }
 
+export function generateRoughHatchLines(x: number, y: number, w: number, h: number, spacing = 8): string[] {
+  const step = spacing * Math.SQRT2
+  const maxC = w + h
+  const paths: string[] = []
+
+  for (let c = step, i = 0; c < maxC; c += step, i++) {
+    // Diagonal (/) lines from lower-left to upper-right
+    const x1 = c <= h ? x : x + (c - h)
+    const y1 = c <= h ? y + c : y + h
+    const x2 = c <= w ? x + c : x + w
+    const y2 = c <= w ? y : y + (c - w)
+
+    const drawable = generator.line(x1, y1, x2, y2, {
+      ...defaultOptions,
+      strokeWidth: 1.5,
+      seed: 42 + i,
+    })
+    paths.push(drawableToPaths(drawable))
+  }
+
+  return paths
+}
+
 export function generateRoughCurvedArrow(
   x1: number, y1: number,
   cp1x: number, cp1y: number,

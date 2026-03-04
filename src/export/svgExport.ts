@@ -1,4 +1,5 @@
-import type { SceneObject, TextObject } from '../types/scene'
+import type { SceneObject, TextObject, RectangleShape, EllipseShape } from '../types/scene'
+import { generateRoughHatchLines } from '../rendering/roughPath'
 
 const LINE_HEIGHT_FACTOR = 1.3
 
@@ -30,11 +31,34 @@ function computeWorldBoundsRecursive(obj: SceneObject, offsetX: number, offsetY:
     }
   } else {
     const bb = obj.boundingBox
+    const shadowOffset = (obj.type === 'rectangle' || obj.type === 'ellipse') && 'shadow' in obj && obj.shadow ? obj.shadow.offset : 0
     bounds.minX = Math.min(bounds.minX, bb.x + ox)
     bounds.minY = Math.min(bounds.minY, bb.y + oy)
-    bounds.maxX = Math.max(bounds.maxX, bb.x + bb.width + ox)
-    bounds.maxY = Math.max(bounds.maxY, bb.y + bb.height + oy)
+    bounds.maxX = Math.max(bounds.maxX, bb.x + bb.width + ox + shadowOffset)
+    bounds.maxY = Math.max(bounds.maxY, bb.y + bb.height + oy + shadowOffset)
   }
+}
+
+function serializeShadow(obj: RectangleShape | EllipseShape, indent: string): string {
+  if (!obj.shadow) return ''
+  const offset = obj.shadow.offset
+  const sw = obj.strokeWidth ?? 2
+  const clipId = `shadow-clip-${obj.id}`
+  const hatchPaths = generateRoughHatchLines(obj.x, obj.y, obj.width, obj.height)
+
+  let clipShape: string
+  if (obj.type === 'rectangle') {
+    clipShape = `${indent}      <rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}"/>`
+  } else {
+    const cx = obj.x + obj.width / 2
+    const cy = obj.y + obj.height / 2
+    clipShape = `${indent}      <ellipse cx="${cx}" cy="${cy}" rx="${obj.width / 2}" ry="${obj.height / 2}"/>`
+  }
+
+  const hatchLines = hatchPaths.map((d) => `${indent}      <path d="${d}" fill="none" stroke="${obj.color}" stroke-width="1.5"/>`).join('\n')
+  const outlinePath = `${indent}    <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>`
+
+  return `${indent}  <g transform="translate(${offset}, ${offset})">\n${indent}    <defs>\n${indent}      <clipPath id="${clipId}">\n${clipShape}\n${indent}      </clipPath>\n${indent}    </defs>\n${indent}    <g clip-path="url(#${clipId})">\n${hatchLines}\n${indent}    </g>\n${outlinePath}\n${indent}  </g>`
 }
 
 function serializeObject(obj: SceneObject, indent: string): string {
@@ -53,7 +77,9 @@ function serializeObject(obj: SceneObject, indent: string): string {
   if (isShape) {
     const fillColor = 'fillColor' in obj && obj.fillColor && obj.fillColor !== 'transparent' ? obj.fillColor : 'none'
     const sw = 'strokeWidth' in obj && obj.strokeWidth ? obj.strokeWidth : 2
-    const strokePath = `${indent}<path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>`
+    const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse') && 'shadow' in obj && obj.shadow
+    const shadowSvg = hasShadow ? serializeShadow(obj as RectangleShape | EllipseShape, indent) : ''
+    const strokePath = `${indent}  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>`
 
     if (fillColor !== 'none' && (obj.type === 'rectangle' || obj.type === 'ellipse')) {
       const fillOpacityAttr = obj.opacity !== undefined && obj.opacity !== 1 ? ` opacity="${obj.opacity}"` : ''
@@ -63,7 +89,11 @@ function serializeObject(obj: SceneObject, indent: string): string {
       } else {
         fillEl = `${indent}  <path d="${obj.pathData}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
       }
-      return `${indent}<g${transform}>\n${fillEl}\n${strokePath}\n${indent}</g>`
+      return `${indent}<g${transform}>\n${shadowSvg ? shadowSvg + '\n' : ''}${fillEl}\n${strokePath}\n${indent}</g>`
+    }
+
+    if (hasShadow) {
+      return `${indent}<g${transform}>\n${shadowSvg}\n${indent}  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>\n${indent}</g>`
     }
 
     return `${indent}<path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"${transform}/>`

@@ -104,6 +104,17 @@
 - [x] Zoom level indicator
 - [x] Keyboard shortcut hints in tooltips
 
+## v0.9.1 — Hatched Drop Shadow `done`
+
+- [x] Hatched drop shadow for rectangles and ellipses
+- [x] Shadow toggle button in toolbar (shown for rectangle/ellipse tool or selected shapes)
+- [x] Adjustable shadow offset slider (2–20px range)
+- [x] Rough hand-drawn hatch lines (via roughjs) clipped to shape boundary
+- [x] Shadow state synced from selected object on selection change
+- [x] Shadow included in SVG and PNG export
+- [x] Shadow persisted with last-used styles (localStorage)
+- [x] Undo/redo support for shadow toggle and offset changes
+
 ## v1.0 — Launch
 
 - [ ] Performance tuning (500+ objects smooth)
