@@ -21,7 +21,65 @@ function escapeXml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function serializeTextObject(obj: TextObject): string {
+function computeWorldBoundsRecursive(obj: SceneObject, offsetX: number, offsetY: number, bounds: { minX: number; minY: number; maxX: number; maxY: number }) {
+  const ox = offsetX + obj.position.x
+  const oy = offsetY + obj.position.y
+  if (obj.type === 'group') {
+    for (const child of obj.children) {
+      computeWorldBoundsRecursive(child, ox, oy, bounds)
+    }
+  } else {
+    const bb = obj.boundingBox
+    bounds.minX = Math.min(bounds.minX, bb.x + ox)
+    bounds.minY = Math.min(bounds.minY, bb.y + oy)
+    bounds.maxX = Math.max(bounds.maxX, bb.x + bb.width + ox)
+    bounds.maxY = Math.max(bounds.maxY, bb.y + bb.height + oy)
+  }
+}
+
+function serializeObject(obj: SceneObject, indent: string): string {
+  if (obj.type === 'text') {
+    return serializeTextObject(obj, indent)
+  }
+  if (obj.type === 'group') {
+    return serializeGroupObject(obj, indent)
+  }
+
+  const tx = obj.position.x
+  const ty = obj.position.y
+  const transform = tx !== 0 || ty !== 0 ? ` transform="translate(${tx}, ${ty})"` : ''
+  const isShape = obj.type !== 'pen'
+
+  if (isShape) {
+    const fillColor = 'fillColor' in obj && obj.fillColor && obj.fillColor !== 'transparent' ? obj.fillColor : 'none'
+    const sw = 'strokeWidth' in obj && obj.strokeWidth ? obj.strokeWidth : 2
+    const strokePath = `${indent}<path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>`
+
+    if (fillColor !== 'none' && (obj.type === 'rectangle' || obj.type === 'ellipse')) {
+      const fillOpacityAttr = obj.opacity !== undefined && obj.opacity !== 1 ? ` opacity="${obj.opacity}"` : ''
+      let fillEl = ''
+      if (obj.type === 'rectangle') {
+        fillEl = `${indent}  <rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
+      } else {
+        fillEl = `${indent}  <path d="${obj.pathData}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
+      }
+      return `${indent}<g${transform}>\n${fillEl}\n${strokePath}\n${indent}</g>`
+    }
+
+    return `${indent}<path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"${transform}/>`
+  }
+  return `${indent}<path d="${obj.pathData}" fill="${obj.color}"${transform}/>`
+}
+
+function serializeGroupObject(obj: SceneObject & { type: 'group' }, indent: string): string {
+  const tx = obj.position.x
+  const ty = obj.position.y
+  const transform = tx !== 0 || ty !== 0 ? ` transform="translate(${tx}, ${ty})"` : ''
+  const childrenSvg = obj.children.map((child: SceneObject) => serializeObject(child, indent + '  ')).join('\n')
+  return `${indent}<g${transform}>\n${childrenSvg}\n${indent}</g>`
+}
+
+function serializeTextObject(obj: TextObject, indent: string = '  '): string {
   const tx = obj.position.x
   const ty = obj.position.y
   const transform = tx !== 0 || ty !== 0 ? ` transform="translate(${tx}, ${ty})"` : ''
@@ -31,11 +89,11 @@ function serializeTextObject(obj: TextObject): string {
   const tspans = lines
     .map((line, i) => {
       const dy = i === 0 ? '' : ` dy="${lineHeight}"`
-      return `    <tspan x="0"${dy}>${escapeXml(line)}</tspan>`
+      return `${indent}  <tspan x="0"${dy}>${escapeXml(line)}</tspan>`
     })
     .join('\n')
 
-  return `  <text font-family="'Humor Sans', cursive" font-size="${obj.fontSize}" fill="${obj.color}"${transform}>\n${tspans}\n  </text>`
+  return `${indent}<text font-family="'Humor Sans', cursive" font-size="${obj.fontSize}" fill="${obj.color}"${transform}>\n${tspans}\n${indent}</text>`
 }
 
 export async function serializeToSvg(objects: SceneObject[]): Promise<string> {
@@ -49,22 +107,23 @@ export async function serializeToSvg(objects: SceneObject[]): Promise<string> {
   let maxX = -Infinity
   let maxY = -Infinity
 
+  const bounds = { minX, minY, maxX, maxY }
   for (const obj of objects) {
-    const bb = obj.boundingBox
-    const ox = obj.position.x
-    const oy = obj.position.y
-    minX = Math.min(minX, bb.x + ox)
-    minY = Math.min(minY, bb.y + oy)
-    maxX = Math.max(maxX, bb.x + bb.width + ox)
-    maxY = Math.max(maxY, bb.y + bb.height + oy)
+    computeWorldBoundsRecursive(obj, 0, 0, bounds)
   }
+  minX = bounds.minX
+  minY = bounds.minY
+  maxX = bounds.maxX
+  maxY = bounds.maxY
 
   const vbX = minX - padding
   const vbY = minY - padding
   const vbW = maxX - minX + padding * 2
   const vbH = maxY - minY + padding * 2
 
-  const hasText = objects.some((o) => o.type === 'text')
+  const hasTextRecursive = (objs: SceneObject[]): boolean =>
+    objs.some((o) => o.type === 'text' || (o.type === 'group' && hasTextRecursive(o.children)))
+  const hasText = hasTextRecursive(objects)
   let styleBlock = ''
   if (hasText) {
     const fontBase64 = await getFontBase64()
@@ -72,36 +131,7 @@ export async function serializeToSvg(objects: SceneObject[]): Promise<string> {
   }
 
   const elements = objects
-    .map((obj) => {
-      if (obj.type === 'text') {
-        return serializeTextObject(obj)
-      }
-
-      const tx = obj.position.x
-      const ty = obj.position.y
-      const transform = tx !== 0 || ty !== 0 ? ` transform="translate(${tx}, ${ty})"` : ''
-      const isShape = obj.type !== 'pen'
-
-      if (isShape) {
-        const fillColor = 'fillColor' in obj && obj.fillColor && obj.fillColor !== 'transparent' ? obj.fillColor : 'none'
-        const sw = 'strokeWidth' in obj && obj.strokeWidth ? obj.strokeWidth : 2
-        const strokePath = `  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>`
-
-        if (fillColor !== 'none' && (obj.type === 'rectangle' || obj.type === 'ellipse')) {
-          const fillOpacityAttr = obj.opacity !== undefined && obj.opacity !== 1 ? ` opacity="${obj.opacity}"` : ''
-          let fillEl = ''
-          if (obj.type === 'rectangle') {
-            fillEl = `  <rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
-          } else {
-            fillEl = `  <path d="${obj.pathData}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
-          }
-          return `  <g${transform}>\n${fillEl}\n${strokePath}\n  </g>`
-        }
-
-        return `  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"${transform}/>`
-      }
-      return `  <path d="${obj.pathData}" fill="${obj.color}"${transform}/>`
-    })
+    .map((obj) => serializeObject(obj, '  '))
     .join('\n')
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vbX} ${vbY} ${vbW} ${vbH}">\n${styleBlock}${elements}\n</svg>`

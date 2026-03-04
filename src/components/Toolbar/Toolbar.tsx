@@ -37,6 +37,7 @@ export function Toolbar() {
     if (!hasSelection) return
     const first = objects.find((o) => selectedIds.has(o.id))
     if (!first) return
+    if (first.type === 'group') return
     setStrokeColor(first.color)
     setOpacity(first.opacity ?? 1)
     if ('strokeWidth' in first && first.strokeWidth !== undefined) setStrokeWidth(first.strokeWidth)

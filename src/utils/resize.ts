@@ -154,6 +154,42 @@ export function applyResize(obj: SceneObject, anchor: Point, scaleX: number, sca
         boundingBox: computeBoundingBox(localPoints),
       }
     }
+    case 'group': {
+      // Recursively resize each child, using world-space anchor
+      // The group's own position offsets children into world space
+      const gx = obj.position.x
+      const gy = obj.position.y
+      const resizedChildren = obj.children.map((child) => {
+        // Convert child to world coords temporarily
+        const worldChild = { ...child, position: { x: child.position.x + gx, y: child.position.y + gy } }
+        const resized = applyResize(worldChild, anchor, scaleX, scaleY)
+        return resized
+      })
+
+      // Recompute group bounding box from resized children (now in world coords)
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      for (const child of resizedChildren) {
+        const bb = child.boundingBox
+        minX = Math.min(minX, child.position.x + bb.x)
+        minY = Math.min(minY, child.position.y + bb.y)
+        maxX = Math.max(maxX, child.position.x + bb.x + bb.width)
+        maxY = Math.max(maxY, child.position.y + bb.y + bb.height)
+      }
+
+      const newGroupPos = { x: minX, y: minY }
+      // Convert children back to group-relative coords
+      const relativeChildren = resizedChildren.map((child) => ({
+        ...child,
+        position: { x: child.position.x - newGroupPos.x, y: child.position.y - newGroupPos.y },
+      }))
+
+      return {
+        ...obj,
+        children: relativeChildren,
+        position: newGroupPos,
+        boundingBox: { x: 0, y: 0, width: maxX - minX, height: maxY - minY },
+      }
+    }
     case 'text': {
       const wp = { x: obj.position.x, y: obj.position.y }
       const sp = scalePoint(wp, anchor, scaleX, scaleY)

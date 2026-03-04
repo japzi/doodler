@@ -115,7 +115,8 @@ export function Canvas() {
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault()
     const { viewport } = useStore.getState()
-    const zoomFactor = e.deltaY < 0 ? 1.1 : 1 / 1.1
+    const intensity = Math.min(Math.abs(e.deltaY) / 100, 1)
+    const zoomFactor = e.deltaY < 0 ? 1 + 0.03 * intensity : 1 / (1 + 0.03 * intensity)
     const newScale = Math.min(Math.max(viewport.scale * zoomFactor, 0.1), 10)
 
     // Zoom toward cursor
@@ -159,6 +160,22 @@ export function Canvas() {
           useStore.getState().setActiveTool('pointer')
           const { objects } = useStore.getState()
           useStore.getState().setSelectedIds(new Set(objects.map((o) => o.id)))
+          return
+        }
+        if ((e.key === 'g' || e.key === 'G') && e.shiftKey) {
+          e.preventDefault()
+          const { selectedIds, ungroupObjects } = useStore.getState()
+          if (selectedIds.size > 0) {
+            ungroupObjects(selectedIds)
+          }
+          return
+        }
+        if ((e.key === 'g' || e.key === 'G') && !e.shiftKey) {
+          e.preventDefault()
+          const { selectedIds, groupObjects } = useStore.getState()
+          if (selectedIds.size >= 2) {
+            groupObjects(selectedIds)
+          }
           return
         }
         switch (e.key) {

@@ -32,6 +32,7 @@ export function SelectionActionBar() {
 
   const showMulti = selected.length >= 2
   const showDistribute = selected.length >= 3
+  const hasGroup = selected.some((o) => o.type === 'group')
 
   return (
     <div
@@ -62,6 +63,32 @@ export function SelectionActionBar() {
           <rect x="1" y="2" width="7" height="7" rx="0.5" fill="currentColor" stroke="currentColor" />
         </svg>
       </button>
+
+      {/* Group / Ungroup */}
+      {(showMulti || hasGroup) && (
+        <>
+          <div className="selection-action-bar__divider" />
+          {showMulti && (
+            <button className="selection-action-bar__button" onClick={() => useStore.getState().groupObjects(selectedIds)} title="Group (Ctrl+G)">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="1" width="6" height="6" rx="1" />
+                <rect x="9" y="9" width="6" height="6" rx="1" />
+                <path d="M4 10v2a2 2 0 002 2h2" strokeDasharray="2 1.5" />
+                <path d="M12 6V4a2 2 0 00-2-2h-2" strokeDasharray="2 1.5" />
+              </svg>
+            </button>
+          )}
+          {hasGroup && (
+            <button className="selection-action-bar__button" onClick={() => useStore.getState().ungroupObjects(selectedIds)} title="Ungroup (Ctrl+Shift+G)">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="1" width="6" height="6" rx="1" />
+                <rect x="9" y="9" width="6" height="6" rx="1" />
+                <line x1="6" y1="10" x2="10" y2="6" strokeDasharray="2 1.5" />
+              </svg>
+            </button>
+          )}
+        </>
+      )}
 
       {showMulti && (
         <>

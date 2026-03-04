@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { SceneObject, Point, ViewportTransform, ToolType, ShapePreview, BoundingBox } from '../types/scene'
+import type { SceneObject, GroupObject, Point, ViewportTransform, ToolType, ShapePreview, BoundingBox } from '../types/scene'
 import { generateId } from '../utils/idGenerator'
 import { applyResize } from '../utils/resize'
 import { getWorldBounds, boundingBoxFromLine, boundingBoxFromCurvedArrow } from '../utils/boundingBox'
@@ -154,6 +154,8 @@ interface DoodlerState {
   updateLineGeometry: (id: string, updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }>) => void
   updateArrowGeometry: (id: string, updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }>) => void
   updateArrowHeadSize: (ids: Set<string>, size: number) => void
+  groupObjects: (ids: Set<string>) => void
+  ungroupObjects: (ids: Set<string>) => void
 }
 
 export const useStore = create<DoodlerState>((set) => ({
@@ -247,6 +249,12 @@ export const useStore = create<DoodlerState>((set) => ({
           const clone = structuredClone(obj)
           clone.id = generateId()
           clone.position = { x: clone.position.x + 10, y: clone.position.y + 10 }
+          if (clone.type === 'group') {
+            clone.children = clone.children.map((child: SceneObject) => ({
+              ...child,
+              id: generateId(),
+            }))
+          }
           clones.push(clone)
         }
       }
@@ -480,11 +488,11 @@ export const useStore = create<DoodlerState>((set) => ({
   setEditingTextId: (id) => set({ editingTextId: id }),
   toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
   updateObjectStyles: (ids, styles) =>
-    set((state) => ({
-      _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
-      _future: [],
-      objects: state.objects.map((o) => {
-        if (!ids.has(o.id)) return o
+    set((state) => {
+      const applyStyles = (o: SceneObject): SceneObject => {
+        if (o.type === 'group') {
+          return { ...o, children: o.children.map(applyStyles) }
+        }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const updated: any = { ...o }
         if (styles.color !== undefined) updated.color = styles.color
@@ -492,8 +500,16 @@ export const useStore = create<DoodlerState>((set) => ({
         if (styles.strokeWidth !== undefined && o.type !== 'text') updated.strokeWidth = styles.strokeWidth
         if (styles.fillColor !== undefined && (o.type === 'rectangle' || o.type === 'ellipse')) updated.fillColor = styles.fillColor
         return updated as SceneObject
-      }),
-    })),
+      }
+      return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
+        objects: state.objects.map((o) => {
+          if (!ids.has(o.id)) return o
+          return applyStyles(o)
+        }),
+      }
+    }),
   updateLineGeometry: (id, updates) =>
     set((state) => ({
       objects: state.objects.map((o) => {
@@ -552,6 +568,95 @@ export const useStore = create<DoodlerState>((set) => ({
         }
       }),
     })),
+
+  groupObjects: (ids) =>
+    set((state) => {
+      const selected = state.objects.filter((o) => ids.has(o.id))
+      if (selected.length < 2) return state
+
+      // Compute combined world bounding box
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      for (const obj of selected) {
+        const bb = obj.boundingBox
+        const ox = obj.position.x
+        const oy = obj.position.y
+        minX = Math.min(minX, bb.x + ox)
+        minY = Math.min(minY, bb.y + oy)
+        maxX = Math.max(maxX, bb.x + bb.width + ox)
+        maxY = Math.max(maxY, bb.y + bb.height + oy)
+      }
+
+      const groupPos = { x: minX, y: minY }
+
+      // Adjust child positions to be relative to group origin
+      const children: SceneObject[] = selected.map((obj) => ({
+        ...obj,
+        position: { x: obj.position.x - groupPos.x, y: obj.position.y - groupPos.y },
+      }))
+
+      const group: GroupObject = {
+        type: 'group',
+        id: generateId(),
+        children,
+        position: groupPos,
+        boundingBox: { x: 0, y: 0, width: maxX - minX, height: maxY - minY },
+      }
+
+      // Replace originals preserving z-order: insert group at position of first selected object
+      const idSet = ids
+      const newObjects: SceneObject[] = []
+      let groupInserted = false
+      for (const obj of state.objects) {
+        if (idSet.has(obj.id)) {
+          if (!groupInserted) {
+            newObjects.push(group)
+            groupInserted = true
+          }
+        } else {
+          newObjects.push(obj)
+        }
+      }
+
+      return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
+        objects: newObjects,
+        selectedIds: new Set([group.id]),
+      }
+    }),
+
+  ungroupObjects: (ids) =>
+    set((state) => {
+      const groups = state.objects.filter((o) => ids.has(o.id) && o.type === 'group') as GroupObject[]
+      if (groups.length === 0) return state
+
+      const groupIds = new Set(groups.map((g) => g.id))
+      const ungroupedChildIds: string[] = []
+
+      const newObjects: SceneObject[] = []
+      for (const obj of state.objects) {
+        if (groupIds.has(obj.id) && obj.type === 'group') {
+          // Replace group with its children, adjusting positions back to world coords
+          for (const child of obj.children) {
+            const restored: SceneObject = {
+              ...child,
+              position: { x: child.position.x + obj.position.x, y: child.position.y + obj.position.y },
+            }
+            newObjects.push(restored)
+            ungroupedChildIds.push(child.id)
+          }
+        } else {
+          newObjects.push(obj)
+        }
+      }
+
+      return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
+        objects: newObjects,
+        selectedIds: new Set(ungroupedChildIds),
+      }
+    }),
 
   clearDrawing: () => set((state) => ({
     _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],

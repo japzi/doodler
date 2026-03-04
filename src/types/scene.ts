@@ -101,7 +101,15 @@ export interface TextObject {
   boundingBox: BoundingBox
 }
 
-export type SceneObject = PenStroke | RectangleShape | EllipseShape | LineShape | ArrowShape | TextObject
+export interface GroupObject {
+  type: 'group'
+  id: string
+  children: SceneObject[]
+  position: { x: number; y: number }
+  boundingBox: BoundingBox
+}
+
+export type SceneObject = PenStroke | RectangleShape | EllipseShape | LineShape | ArrowShape | TextObject | GroupObject
 
 export interface ViewportTransform {
   offsetX: number
