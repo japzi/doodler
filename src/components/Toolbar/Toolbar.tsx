@@ -83,8 +83,9 @@ export function Toolbar() {
           onClick={() => setActiveTool('pointer')}
           title="Pointer (V)"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M4 2l12 16-4.5-1.5L8 22l-2-1 3.5-5.5L4 14z" />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+            <path d="M13 13l6 6" />
           </svg>
         </button>
         <button

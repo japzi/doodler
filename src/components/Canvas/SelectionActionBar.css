@@ -13,16 +13,17 @@
 }
 
 .selection-action-bar__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
   height: 28px;
-  padding: 0 10px;
+  padding: 0;
   border: none;
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
   color: #444;
-  white-space: nowrap;
   transition: background 0.15s;
 }
 

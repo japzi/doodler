@@ -6,6 +6,7 @@ export function SelectionOverlay() {
   const objects = useStore((s) => s.objects)
   const marqueeRect = useStore((s) => s.marqueeRect)
   const viewport = useStore((s) => s.viewport)
+  const editingTextId = useStore((s) => s.editingTextId)
 
   const padding = 8
   const handleSize = 8 / viewport.scale
@@ -13,7 +14,7 @@ export function SelectionOverlay() {
 
   let selectionEl: React.ReactNode = null
 
-  if (selectedIds.size > 0) {
+  if (selectedIds.size > 0 && !editingTextId) {
     const selected = objects.filter((o) => selectedIds.has(o.id))
     if (selected.length > 0) {
       const isSingleArrow = selected.length === 1 && selected[0].type === 'arrow'
