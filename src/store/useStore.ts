@@ -59,6 +59,8 @@ interface DoodlerState {
   sendBackward: (ids: Set<string>) => void
   resizeObjects: (snapshots: Map<string, SceneObject>, anchor: Point, scaleX: number, scaleY: number) => void
   matchSize: (ids: Set<string>, mode: 'width' | 'height' | 'both') => void
+  alignObjects: (ids: Set<string>, alignment: 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom') => void
+  distributeObjects: (ids: Set<string>, axis: 'horizontal' | 'vertical') => void
   setSelectedIds: (ids: Set<string>) => void
   setMarqueeRect: (rect: BoundingBox | null) => void
   setActiveTool: (tool: ToolType) => void
@@ -179,6 +181,101 @@ export const useStore = create<DoodlerState>((set) => ({
           const sx = mode === 'height' ? 1 : refBounds.width / objBounds.width
           const sy = mode === 'width' ? 1 : refBounds.height / objBounds.height
           return applyResize(o, { x: cx, y: cy }, sx, sy)
+        }),
+      }
+    }),
+
+  alignObjects: (ids, alignment) =>
+    set((state) => {
+      const selected = state.objects.filter((o) => ids.has(o.id))
+      if (selected.length < 2) return state
+      const bounds = selected.map((o) => ({ id: o.id, wb: getWorldBounds(o) }))
+
+      let target: number
+      switch (alignment) {
+        case 'left':
+          target = Math.min(...bounds.map((b) => b.wb.x))
+          break
+        case 'right':
+          target = Math.max(...bounds.map((b) => b.wb.x + b.wb.width))
+          break
+        case 'centerH': {
+          const minX = Math.min(...bounds.map((b) => b.wb.x))
+          const maxX = Math.max(...bounds.map((b) => b.wb.x + b.wb.width))
+          target = (minX + maxX) / 2
+          break
+        }
+        case 'top':
+          target = Math.min(...bounds.map((b) => b.wb.y))
+          break
+        case 'bottom':
+          target = Math.max(...bounds.map((b) => b.wb.y + b.wb.height))
+          break
+        case 'centerV': {
+          const minY = Math.min(...bounds.map((b) => b.wb.y))
+          const maxY = Math.max(...bounds.map((b) => b.wb.y + b.wb.height))
+          target = (minY + maxY) / 2
+          break
+        }
+      }
+
+      const deltas = new Map<string, { dx: number; dy: number }>()
+      for (const b of bounds) {
+        let dx = 0, dy = 0
+        switch (alignment) {
+          case 'left': dx = target - b.wb.x; break
+          case 'right': dx = target - (b.wb.x + b.wb.width); break
+          case 'centerH': dx = target - (b.wb.x + b.wb.width / 2); break
+          case 'top': dy = target - b.wb.y; break
+          case 'bottom': dy = target - (b.wb.y + b.wb.height); break
+          case 'centerV': dy = target - (b.wb.y + b.wb.height / 2); break
+        }
+        deltas.set(b.id, { dx, dy })
+      }
+
+      return {
+        objects: state.objects.map((o) => {
+          const d = deltas.get(o.id)
+          if (!d || (d.dx === 0 && d.dy === 0)) return o
+          return { ...o, position: { x: o.position.x + d.dx, y: o.position.y + d.dy } }
+        }),
+      }
+    }),
+
+  distributeObjects: (ids, axis) =>
+    set((state) => {
+      const selected = state.objects.filter((o) => ids.has(o.id))
+      if (selected.length < 3) return state
+      const items = selected.map((o) => ({ id: o.id, wb: getWorldBounds(o) }))
+
+      if (axis === 'horizontal') {
+        items.sort((a, b) => (a.wb.x + a.wb.width / 2) - (b.wb.x + b.wb.width / 2))
+      } else {
+        items.sort((a, b) => (a.wb.y + a.wb.height / 2) - (b.wb.y + b.wb.height / 2))
+      }
+
+      const first = items[0].wb
+      const last = items[items.length - 1].wb
+      const totalObjSize = items.reduce((sum, it) => sum + (axis === 'horizontal' ? it.wb.width : it.wb.height), 0)
+      const span = axis === 'horizontal'
+        ? (last.x + last.width) - first.x
+        : (last.y + last.height) - first.y
+      const gap = (span - totalObjSize) / (items.length - 1)
+
+      const deltas = new Map<string, { dx: number; dy: number }>()
+      let cursor = axis === 'horizontal' ? first.x : first.y
+      for (const item of items) {
+        const current = axis === 'horizontal' ? item.wb.x : item.wb.y
+        const d = cursor - current
+        deltas.set(item.id, axis === 'horizontal' ? { dx: d, dy: 0 } : { dx: 0, dy: d })
+        cursor += (axis === 'horizontal' ? item.wb.width : item.wb.height) + gap
+      }
+
+      return {
+        objects: state.objects.map((o) => {
+          const d = deltas.get(o.id)
+          if (!d || (d.dx === 0 && d.dy === 0)) return o
+          return { ...o, position: { x: o.position.x + d.dx, y: o.position.y + d.dy } }
         }),
       }
     }),

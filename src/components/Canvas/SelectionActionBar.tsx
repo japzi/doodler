@@ -30,9 +30,19 @@ export function SelectionActionBar() {
   const screenX = cx * viewport.scale + viewport.offsetX
   const screenY = (maxY + 16) * viewport.scale + viewport.offsetY
 
-  const handleClick = (mode: 'width' | 'height' | 'both') => {
+  const handleSize = (mode: 'width' | 'height' | 'both') => {
     useStore.getState().matchSize(selectedIds, mode)
   }
+
+  const handleAlign = (alignment: 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom') => {
+    useStore.getState().alignObjects(selectedIds, alignment)
+  }
+
+  const handleDistribute = (axis: 'horizontal' | 'vertical') => {
+    useStore.getState().distributeObjects(selectedIds, axis)
+  }
+
+  const showDistribute = selected.length >= 3
 
   return (
     <div
@@ -40,15 +50,45 @@ export function SelectionActionBar() {
       style={{ left: screenX, top: screenY }}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <button className="selection-action-bar__button" onClick={() => handleClick('width')}>
+      <button className="selection-action-bar__button" onClick={() => handleSize('width')}>
         Same Width
       </button>
-      <button className="selection-action-bar__button" onClick={() => handleClick('height')}>
+      <button className="selection-action-bar__button" onClick={() => handleSize('height')}>
         Same Height
       </button>
-      <button className="selection-action-bar__button" onClick={() => handleClick('both')}>
+      <button className="selection-action-bar__button" onClick={() => handleSize('both')}>
         Same Size
       </button>
+      <div className="selection-action-bar__divider" />
+      <button className="selection-action-bar__button" onClick={() => handleAlign('left')}>
+        Left
+      </button>
+      <button className="selection-action-bar__button" onClick={() => handleAlign('centerH')}>
+        Center H
+      </button>
+      <button className="selection-action-bar__button" onClick={() => handleAlign('right')}>
+        Right
+      </button>
+      <button className="selection-action-bar__button" onClick={() => handleAlign('top')}>
+        Top
+      </button>
+      <button className="selection-action-bar__button" onClick={() => handleAlign('centerV')}>
+        Center V
+      </button>
+      <button className="selection-action-bar__button" onClick={() => handleAlign('bottom')}>
+        Bottom
+      </button>
+      {showDistribute && (
+        <>
+          <div className="selection-action-bar__divider" />
+          <button className="selection-action-bar__button" onClick={() => handleDistribute('horizontal')}>
+            Space H
+          </button>
+          <button className="selection-action-bar__button" onClick={() => handleDistribute('vertical')}>
+            Space V
+          </button>
+        </>
+      )}
     </div>
   )
 }

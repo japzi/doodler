@@ -29,3 +29,10 @@
 .selection-action-bar__button:hover {
   background: #f0f0f0;
 }
+
+.selection-action-bar__divider {
+  width: 1px;
+  height: 20px;
+  background: #e0e0e0;
+  margin: 0 2px;
+}

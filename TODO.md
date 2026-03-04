@@ -68,6 +68,17 @@
 - [x] Bar disappears when fewer than 2 objects selected
 - [x] Works for all object types (shapes, pen, text, lines, arrows)
 
+## v0.6.2 — Alignment and Equispacement `done`
+
+- [x] Horizontal Center alignment
+- [x] Horizontal Left alignment
+- [x] Horizontal Right alignment
+- [x] Vertical Top alignment
+- [x] Vertical Bottom alignment
+- [x] Vertical Mid alignment
+- [x] Make them equal spaced vertically
+- [x] Make them equal spaced horizontally
+
 ## v0.7 — Persistence
 
 - [ ] Auto-save to localStorage
@@ -95,3 +106,92 @@
 - [ ] PWA / service worker for offline use
 - [ ] Documentation and contribution guidelines
 - [ ] Public release
+
+
+Most Cost-Effective Stack
+
+  1. Hosting — $0/month
+
+  ┌──────────────────┬─────────────────────┬───────────────┬───────────────────────────────────────────────────────┐
+  │      Option      │      Free Tier      │ Custom Domain │                         Notes                         │
+  ├──────────────────┼─────────────────────┼───────────────┼───────────────────────────────────────────────────────┤
+  │ Cloudflare Pages │ Unlimited bandwidth │ Yes (free)    │ Best free tier, also gives free CDN + DDoS protection │
+  ├──────────────────┼─────────────────────┼───────────────┼───────────────────────────────────────────────────────┤
+  │ Vercel           │ 100GB bandwidth     │ Yes (free)    │ Great Vite/React integration                          │
+  ├──────────────────┼─────────────────────┼───────────────┼───────────────────────────────────────────────────────┤
+  │ Netlify          │ 100GB bandwidth     │ Yes (free)    │ Similar to Vercel                                     │
+  └──────────────────┴─────────────────────┴───────────────┴───────────────────────────────────────────────────────┘
+
+  Recommendation: Cloudflare Pages. Unlimited bandwidth on free tier, and if you buy the domain through Cloudflare Registrar, they sell domains at wholesale cost (~$9-10/year for
+  .com).
+
+  2. Auth + Database — $0/month (at your scale)
+
+  Supabase is the best bang-for-buck here. Free tier gives you:
+  - 50,000 monthly active users (auth)
+  - 500MB Postgres database (for saving drawings, user profiles)
+  - 1GB file storage (if you want image exports)
+  - Built-in Row Level Security so users can only access their own data
+  - Email/password, Google, GitHub OAuth — all built-in
+
+  This handles user registration and storing user drawings server-side (replacing or complementing your planned localStorage persistence in v0.7).
+
+  3. Subscriptions — $0/month fixed, pay-per-transaction
+
+  Stripe is the standard:
+  - No monthly fee
+  - 2.9% + $0.30 per transaction
+  - Stripe Checkout gives you a hosted payment page (no custom UI needed)
+  - Subscription management, invoicing, customer portal all included
+  - Supabase has a well-documented pattern for syncing Stripe subscription status via webhooks
+
+  You'd gate premium features client-side based on a subscription_tier column in your Supabase users table.
+
+  4. Domain — ~$10-15/year
+
+  Only real fixed cost. Cloudflare Registrar or Namecheap for cheapest .com pricing.
+
+  ---
+  Total Fixed Cost
+
+  ┌───────────────────────────────────┬───────────────────────────────┐
+  │               Item                │             Cost              │
+  ├───────────────────────────────────┼───────────────────────────────┤
+  │ Domain                            │ ~$10-15/year                  │
+  ├───────────────────────────────────┼───────────────────────────────┤
+  │ Hosting (Cloudflare Pages)        │ $0                            │
+  ├───────────────────────────────────┼───────────────────────────────┤
+  │ Auth + DB (Supabase free tier)    │ $0                            │
+  ├───────────────────────────────────┼───────────────────────────────┤
+  │ Payments (Stripe)                 │ $0 fixed, 2.9%+$0.30 per sale │
+  ├───────────────────────────────────┼───────────────────────────────┤
+  │ Total until you have paying users │ ~$1/month                     │
+  └───────────────────────────────────┴───────────────────────────────┘
+
+  ---
+  What Premium Features Could Look Like
+
+  Free tier (no login required):
+  - Full drawing tools as they exist today
+  - Export SVG/PNG
+  - Local save/load
+
+  Free tier (logged in):
+  - Cloud save (up to N drawings)
+  - Access from any device
+
+  Paid tier:
+  - Unlimited cloud drawings
+  - Icon library (your planned v0.4)
+  - Custom fonts / advanced styling
+  - Collaboration (future)
+  - Remove watermark on exports
+
+  ---
+  Backend Needs
+
+  For Stripe webhooks, you'd need a small server-side function. Both Cloudflare Pages (Workers) and Vercel (Edge Functions) give you this for free — no separate backend needed. One
+   small function to handle checkout.session.completed and update the user's subscription status in Supabase.
+
+  ---
+  Want me to plan out the implementation for any of these (e.g., setting up Supabase auth integration, or the Stripe subscription flow)?
