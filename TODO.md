@@ -91,7 +91,6 @@
 - [x] Select an object and change stroke/fill color and transparency
 - [ ] Allow arrows to be curved. When arrow is selected, only show corner points. At mouse over, show a center control point, upon clicking break the arrow in the middle. Also let two handles in that position to change the gradient at that point allowing arrow to take the shape of a curve. 
 - [ ] Undo/redo (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z)
-- [ ] Dark mode / light mode toggle
 - [ ] PNG export with configurable resolution
 - [ ] Transparent background in PNG export
 - [ ] Download SVG file

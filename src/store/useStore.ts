@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import type { SceneObject, Point, ViewportTransform, ToolType, ShapePreview, BoundingBox } from '../types/scene'
 import { generateId } from '../utils/idGenerator'
 import { applyResize } from '../utils/resize'
-import { getWorldBounds } from '../utils/boundingBox'
+import { getWorldBounds, boundingBoxFromLine, boundingBoxFromCurvedArrow } from '../utils/boundingBox'
+import { generateRoughArrow, generateRoughCurvedArrow } from '../rendering/roughPath'
 
 const STYLES_KEY = 'doodler-styles'
 const DRAWING_KEY = 'doodler-drawing'
@@ -62,15 +63,15 @@ export function importProject(file: File): Promise<void> {
   })
 }
 
-function loadStyles(): { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number } {
+function loadStyles(): { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number; arrowHeadSize: number } {
   try {
     const raw = localStorage.getItem(STYLES_KEY)
-    if (raw) return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, fontSize: 24, ...JSON.parse(raw) }
+    if (raw) return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, fontSize: 24, arrowHeadSize: 16, ...JSON.parse(raw) }
   } catch { /* ignore */ }
-  return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, fontSize: 24 }
+  return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, fontSize: 24, arrowHeadSize: 16 }
 }
 
-function persistStyles(state: { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number }) {
+function persistStyles(state: { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number; arrowHeadSize: number }) {
   try {
     localStorage.setItem(STYLES_KEY, JSON.stringify(state))
   } catch { /* ignore */ }
@@ -91,6 +92,7 @@ interface DoodlerState {
   strokeWidth: number
   opacity: number
   fontSize: number
+  arrowHeadSize: number
 
   // Viewport
   viewport: ViewportTransform
@@ -125,6 +127,7 @@ interface DoodlerState {
   setFillColor: (color: string) => void
   setStrokeWidth: (width: number) => void
   setOpacity: (opacity: number) => void
+  setArrowHeadSize: (size: number) => void
   setFontSize: (size: number) => void
   setViewport: (viewport: ViewportTransform) => void
   setActiveStrokePoints: (points: Point[] | null) => void
@@ -133,6 +136,8 @@ interface DoodlerState {
   setEditingTextId: (id: string | null) => void
   clearDrawing: () => void
   updateObjectStyles: (ids: Set<string>, styles: { color?: string; fillColor?: string; strokeWidth?: number; opacity?: number }) => void
+  updateArrowGeometry: (id: string, updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }>) => void
+  updateArrowHeadSize: (ids: Set<string>, size: number) => void
 }
 
 export const useStore = create<DoodlerState>((set) => ({
@@ -144,6 +149,7 @@ export const useStore = create<DoodlerState>((set) => ({
   strokeWidth: savedStyles.strokeWidth,
   opacity: savedStyles.opacity,
   fontSize: savedStyles.fontSize,
+  arrowHeadSize: savedStyles.arrowHeadSize,
   viewport: savedDrawing?.viewport ?? { offsetX: 0, offsetY: 0, scale: 1 },
   activeStrokePoints: null,
   activeShapePreview: null,
@@ -343,27 +349,32 @@ export const useStore = create<DoodlerState>((set) => ({
   setMarqueeRect: (rect) => set({ marqueeRect: rect }),
   setActiveTool: (tool) => set({ activeTool: tool, selectedIds: new Set(), activeTextInput: null, editingTextId: null }),
   setStrokeColor: (color) => set((state) => {
-    const styles = { strokeColor: color, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize }
+    const styles = { strokeColor: color, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize }
     persistStyles(styles)
     return { strokeColor: color }
   }),
   setFillColor: (color) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: color, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize }
+    const styles = { strokeColor: state.strokeColor, fillColor: color, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize }
     persistStyles(styles)
     return { fillColor: color }
   }),
   setStrokeWidth: (width) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: width, opacity: state.opacity, fontSize: state.fontSize }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: width, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize }
     persistStyles(styles)
     return { strokeWidth: width }
   }),
   setOpacity: (opacity) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity, fontSize: state.fontSize }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity, fontSize: state.fontSize, arrowHeadSize: state.arrowHeadSize }
     persistStyles(styles)
     return { opacity }
   }),
+  setArrowHeadSize: (size) => set((state) => {
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, arrowHeadSize: size }
+    persistStyles(styles)
+    return { arrowHeadSize: size }
+  }),
   setFontSize: (size) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: size }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: size, arrowHeadSize: state.arrowHeadSize }
     persistStyles(styles)
     return { fontSize: size }
   }),
@@ -385,6 +396,45 @@ export const useStore = create<DoodlerState>((set) => ({
         return updated as SceneObject
       }),
     })),
+  updateArrowGeometry: (id, updates) =>
+    set((state) => ({
+      objects: state.objects.map((o) => {
+        if (o.id !== id || o.type !== 'arrow') return o
+        const arrow = { ...o, ...updates }
+        const hl = arrow.arrowHeadSize ?? 16
+        if (arrow.cp1 && arrow.cp2) {
+          return {
+            ...arrow,
+            pathData: generateRoughCurvedArrow(arrow.x1, arrow.y1, arrow.cp1.x, arrow.cp1.y, arrow.cp2.x, arrow.cp2.y, arrow.x2, arrow.y2, hl),
+            boundingBox: boundingBoxFromCurvedArrow(arrow.x1, arrow.y1, arrow.cp1.x, arrow.cp1.y, arrow.cp2.x, arrow.cp2.y, arrow.x2, arrow.y2),
+          }
+        }
+        return {
+          ...arrow,
+          pathData: generateRoughArrow(arrow.x1, arrow.y1, arrow.x2, arrow.y2, hl),
+          boundingBox: boundingBoxFromLine(arrow.x1, arrow.y1, arrow.x2, arrow.y2),
+        }
+      }),
+    })),
+
+  updateArrowHeadSize: (ids, size) =>
+    set((state) => ({
+      objects: state.objects.map((o) => {
+        if (!ids.has(o.id) || o.type !== 'arrow') return o
+        const arrow = { ...o, arrowHeadSize: size }
+        if (arrow.cp1 && arrow.cp2) {
+          return {
+            ...arrow,
+            pathData: generateRoughCurvedArrow(arrow.x1, arrow.y1, arrow.cp1.x, arrow.cp1.y, arrow.cp2.x, arrow.cp2.y, arrow.x2, arrow.y2, size),
+          }
+        }
+        return {
+          ...arrow,
+          pathData: generateRoughArrow(arrow.x1, arrow.y1, arrow.x2, arrow.y2, size),
+        }
+      }),
+    })),
+
   clearDrawing: () => set({
     objects: [],
     selectedIds: new Set(),

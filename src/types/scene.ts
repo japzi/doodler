@@ -77,6 +77,9 @@ export interface ArrowShape {
   y1: number
   x2: number
   y2: number
+  cp1?: { x: number; y: number }
+  cp2?: { x: number; y: number }
+  arrowHeadSize?: number
   color: string
   strokeWidth?: number
   opacity?: number

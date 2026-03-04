@@ -12,6 +12,19 @@ export function boundingBoxFromLine(x1: number, y1: number, x2: number, y2: numb
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
 }
 
+export function boundingBoxFromCurvedArrow(
+  x1: number, y1: number,
+  cp1x: number, cp1y: number,
+  cp2x: number, cp2y: number,
+  x2: number, y2: number,
+): BoundingBox {
+  const minX = Math.min(x1, cp1x, cp2x, x2)
+  const minY = Math.min(y1, cp1y, cp2y, y2)
+  const maxX = Math.max(x1, cp1x, cp2x, x2)
+  const maxY = Math.max(y1, cp1y, cp2y, y2)
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+}
+
 export function computeBoundingBox(points: Point[]): BoundingBox {
   if (points.length === 0) {
     return { x: 0, y: 0, width: 0, height: 0 }

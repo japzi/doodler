@@ -110,10 +110,11 @@ export function useShapeTool() {
         break
       }
       case 'arrow': {
-        const pathData = generateRoughArrow(x1, y1, x2, y2)
+        const arrowHeadSize = useStore.getState().arrowHeadSize
+        const pathData = generateRoughArrow(x1, y1, x2, y2, arrowHeadSize)
         addObject({
           type: 'arrow',
-          id, x1, y1, x2, y2, color, strokeWidth, opacity, pathData,
+          id, x1, y1, x2, y2, arrowHeadSize, color, strokeWidth, opacity, pathData,
           position: { x: 0, y: 0 },
           boundingBox: boundingBoxFromLine(x1, y1, x2, y2),
         })

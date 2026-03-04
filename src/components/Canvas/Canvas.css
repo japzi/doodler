@@ -22,3 +22,9 @@
 .canvas--text {
   cursor: text;
 }
+
+.arrow-midpoint-indicator:hover {
+  fill: rgba(74, 144, 217, 0.3);
+  stroke: #4a90d9;
+  transition: fill 0.15s, stroke 0.15s;
+}

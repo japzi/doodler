@@ -2,9 +2,10 @@ import { useCallback, useRef } from 'react'
 import { useStore } from '../store/useStore'
 import { getObjectIdFromEvent } from '../utils/hitTest'
 import { boxesIntersect, getWorldBounds } from '../utils/boundingBox'
-import type { Point, SceneObject, BoundingBox } from '../types/scene'
+import type { Point, SceneObject, ArrowShape, BoundingBox } from '../types/scene'
 
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se'
+type ArrowHandleType = 'p1' | 'p2' | 'cp1' | 'cp2' | 'midpoint' | 'headSize'
 
 export function usePointerTool() {
   const isDragging = useRef(false)
@@ -23,13 +24,51 @@ export function usePointerTool() {
   const resizeOriginalCorner = useRef<Point | null>(null)
   const resizeSnapshots = useRef<Map<string, SceneObject> | null>(null)
 
+  // Arrow handle drag state
+  const arrowHandleDrag = useRef<{
+    arrowId: string
+    handleType: ArrowHandleType
+    snapshot: ArrowShape
+    startPoint: Point
+  } | null>(null)
+
   const onPointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>, scenePoint: Point) => {
     if (e.button !== 0) return
 
     shiftOnDown.current = e.shiftKey
 
-    // Check for resize handle first
+    // Check for arrow handle first
     const target = e.target as SVGElement
+    const arrowHandleAttr = target.closest('[data-arrow-handle]')?.getAttribute('data-arrow-handle') as ArrowHandleType | null
+    if (arrowHandleAttr) {
+      const { objects, selectedIds } = useStore.getState()
+      const arrowId = [...selectedIds][0]
+      const arrow = objects.find((o) => o.id === arrowId && o.type === 'arrow') as ArrowShape | undefined
+      if (!arrow) return
+
+      if (arrowHandleAttr === 'midpoint') {
+        // Break straight arrow into curve — place both control points at midpoint
+        const mx = (arrow.x1 + arrow.x2) / 2
+        const my = (arrow.y1 + arrow.y2) / 2
+        useStore.getState().updateArrowGeometry(arrowId, {
+          cp1: { x: mx, y: my },
+          cp2: { x: mx, y: my },
+        })
+        return
+      }
+
+      // Start arrow handle drag
+      arrowHandleDrag.current = {
+        arrowId,
+        handleType: arrowHandleAttr,
+        snapshot: structuredClone(arrow) as ArrowShape,
+        startPoint: scenePoint,
+      }
+      ;(e.target as SVGElement).setPointerCapture(e.pointerId)
+      return
+    }
+
+    // Check for resize handle
     const handleAttr = target.closest('[data-resize-handle]')?.getAttribute('data-resize-handle') as ResizeHandle | null
     if (handleAttr) {
       isResizing.current = true
@@ -96,6 +135,62 @@ export function usePointerTool() {
   }, [])
 
   const onPointerMove = useCallback((_e: React.PointerEvent<SVGSVGElement>, scenePoint: Point) => {
+    // Arrow handle drag
+    if (arrowHandleDrag.current) {
+      const { arrowId, handleType, snapshot, startPoint } = arrowHandleDrag.current
+
+      // Head size drag — measure distance from pointer to arrowhead tip
+      if (handleType === 'headSize') {
+        const tipX = snapshot.position.x + snapshot.x2
+        const tipY = snapshot.position.y + snapshot.y2
+        const dist = Math.sqrt((scenePoint.x - tipX) ** 2 + (scenePoint.y - tipY) ** 2)
+        const newSize = Math.max(4, Math.min(64, Math.round(dist)))
+        useStore.getState().updateArrowHeadSize(new Set([arrowId]), newSize)
+        return
+      }
+
+      const dx = scenePoint.x - startPoint.x
+      const dy = scenePoint.y - startPoint.y
+
+      // Always pass all coordinates from snapshot so updateArrowGeometry
+      // gets a consistent set (it merges into current state which may
+      // have been re-normalized from a previous frame).
+      const updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }> = {
+        x1: snapshot.x1,
+        y1: snapshot.y1,
+        x2: snapshot.x2,
+        y2: snapshot.y2,
+        ...(snapshot.cp1 && snapshot.cp2 ? {
+          cp1: { x: snapshot.cp1.x, y: snapshot.cp1.y },
+          cp2: { x: snapshot.cp2.x, y: snapshot.cp2.y },
+        } : {}),
+      }
+
+      switch (handleType) {
+        case 'p1':
+          updates.x1 = snapshot.x1 + dx
+          updates.y1 = snapshot.y1 + dy
+          break
+        case 'p2':
+          updates.x2 = snapshot.x2 + dx
+          updates.y2 = snapshot.y2 + dy
+          break
+        case 'cp1':
+          if (snapshot.cp1) {
+            updates.cp1 = { x: snapshot.cp1.x + dx, y: snapshot.cp1.y + dy }
+          }
+          break
+        case 'cp2':
+          if (snapshot.cp2) {
+            updates.cp2 = { x: snapshot.cp2.x + dx, y: snapshot.cp2.y + dy }
+          }
+          break
+      }
+
+      useStore.getState().updateArrowGeometry(arrowId, updates)
+      return
+    }
+
     // Resize
     if (isResizing.current && resizeAnchor.current && resizeOriginalCorner.current && resizeSnapshots.current) {
       const anchor = resizeAnchor.current
@@ -142,6 +237,12 @@ export function usePointerTool() {
   }, [])
 
   const onPointerUp = useCallback(() => {
+    // Arrow handle drag cleanup
+    if (arrowHandleDrag.current) {
+      arrowHandleDrag.current = null
+      return
+    }
+
     // Resize cleanup
     if (isResizing.current) {
       isResizing.current = false

@@ -29,7 +29,6 @@ export function Toolbar() {
   const selectedObjects = hasSelection ? objects.filter((o) => selectedIds.has(o.id)) : []
   const selectedHasFill = selectedObjects.some((o) => o.type === 'rectangle' || o.type === 'ellipse')
   const selectedHasStrokeWidth = selectedObjects.some((o) => o.type !== 'text')
-
   // Sync toolbar to first selected object's styles
   useEffect(() => {
     if (!hasSelection) return
