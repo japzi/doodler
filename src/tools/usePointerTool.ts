@@ -56,6 +56,7 @@ export function usePointerTool() {
 
       if (handleAttrValue === 'midpoint') {
         // Break straight line/arrow into curve — place both control points at midpoint
+        useStore.getState().saveSnapshot()
         const mx = (obj.x1 + obj.x2) / 2
         const my = (obj.y1 + obj.y2) / 2
         const updateFn = handleObjType === 'arrow'
@@ -65,7 +66,8 @@ export function usePointerTool() {
         return
       }
 
-      // Start handle drag
+      // Start handle drag — snapshot once before continuous updates
+      useStore.getState().saveSnapshot()
       lineArrowHandleDrag.current = {
         objId,
         objType: handleObjType,
@@ -80,6 +82,7 @@ export function usePointerTool() {
     // Check for resize handle
     const resizeAttr = target.closest('[data-resize-handle]')?.getAttribute('data-resize-handle') as ResizeHandle | null
     if (resizeAttr) {
+      useStore.getState().saveSnapshot()
       isResizing.current = true
       resizeHandle.current = resizeAttr
 
@@ -129,6 +132,7 @@ export function usePointerTool() {
       } else if (!selectedIds.has(objectId)) {
         useStore.getState().setSelectedIds(new Set([objectId]))
       }
+      useStore.getState().saveSnapshot()
       isDragging.current = true
       lastPoint.current = scenePoint
       dragTarget.current = new Set(useStore.getState().selectedIds)

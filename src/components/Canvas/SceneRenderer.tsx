@@ -7,14 +7,12 @@ const LINE_HEIGHT_FACTOR = 1.3
 const TextElement = memo(function TextElement({ obj }: { obj: TextObject }) {
   const lines = obj.text.split('\n')
   const lineHeight = obj.fontSize * LINE_HEIGHT_FACTOR
-  const opacity = obj.opacity ?? 1
 
   return (
     <text
       fontFamily="'Humor Sans', cursive"
       fontSize={obj.fontSize}
       fill={obj.color}
-      opacity={opacity !== 1 ? opacity : undefined}
       transform={`translate(${obj.position.x}, ${obj.position.y})`}
       data-object-id={obj.id}
       style={{ cursor: 'default' }}
@@ -31,25 +29,24 @@ const TextElement = memo(function TextElement({ obj }: { obj: TextObject }) {
 function FillShape({ obj }: { obj: RectangleShape | EllipseShape }) {
   const fillColor = obj.fillColor ?? 'none'
   if (fillColor === 'none' || fillColor === 'transparent') return null
+  const opacity = obj.opacity ?? 1
 
   if (obj.type === 'rectangle') {
-    return <rect x={obj.x} y={obj.y} width={obj.width} height={obj.height} fill={fillColor} stroke="none" />
+    return <rect x={obj.x} y={obj.y} width={obj.width} height={obj.height} fill={fillColor} stroke="none" opacity={opacity !== 1 ? opacity : undefined} />
   }
   const cx = obj.x + obj.width / 2
   const cy = obj.y + obj.height / 2
-  return <ellipse cx={cx} cy={cy} rx={obj.width / 2} ry={obj.height / 2} fill={fillColor} stroke="none" />
+  return <ellipse cx={cx} cy={cy} rx={obj.width / 2} ry={obj.height / 2} fill={fillColor} stroke="none" opacity={opacity !== 1 ? opacity : undefined} />
 }
 
 const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObject, TextObject> }) {
   const isShape = obj.type !== 'pen'
-  const opacity = obj.opacity ?? 1
   const strokeWidth = 'strokeWidth' in obj ? (obj.strokeWidth ?? 2) : 2
   const hasFill = (obj.type === 'rectangle' || obj.type === 'ellipse') && obj.fillColor && obj.fillColor !== 'none' && obj.fillColor !== 'transparent'
 
   if (hasFill) {
     return (
       <g
-        opacity={opacity !== 1 ? opacity : undefined}
         transform={`translate(${obj.position.x}, ${obj.position.y})`}
         data-object-id={obj.id}
         style={{ cursor: 'default' }}
@@ -71,7 +68,6 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
       fill={isShape ? 'none' : obj.color}
       stroke={isShape ? obj.color : undefined}
       strokeWidth={isShape ? strokeWidth : undefined}
-      opacity={opacity !== 1 ? opacity : undefined}
       transform={`translate(${obj.position.x}, ${obj.position.y})`}
       data-object-id={obj.id}
       style={{ cursor: 'default' }}

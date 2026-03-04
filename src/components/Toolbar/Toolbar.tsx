@@ -180,22 +180,24 @@ export function Toolbar() {
           </select>
         )}
 
-        <div className="toolbar__opacity-control">
-          <input
-            className="toolbar__opacity-slider"
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round(opacity * 100)}
-            onChange={(e) => {
-              const o = Number(e.target.value) / 100
-              setOpacity(o)
-              if (hasSelection) updateObjectStyles(selectedIds, { opacity: o })
-            }}
-            title="Opacity"
-          />
-          <span className="toolbar__opacity-label">{Math.round(opacity * 100)}%</span>
-        </div>
+        {(activeTool === 'rectangle' || activeTool === 'ellipse' || (activeTool === 'pointer' && selectedHasFill)) && (
+          <div className="toolbar__opacity-control">
+            <input
+              className="toolbar__opacity-slider"
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(opacity * 100)}
+              onChange={(e) => {
+                const o = Number(e.target.value) / 100
+                setOpacity(o)
+                if (hasSelection) updateObjectStyles(selectedIds, { opacity: o })
+              }}
+              title="Fill opacity"
+            />
+            <span className="toolbar__opacity-label">{Math.round(opacity * 100)}%</span>
+          </div>
+        )}
 
         {activeTool === 'text' && (
           <>

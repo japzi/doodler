@@ -92,7 +92,11 @@
 - [x] Allow arrows to be curved. When arrow is selected, only show corner points. At mouse over, show a center control point, upon clicking break the arrow in the middle. Also let two handles in that position to change the gradient at that point allowing arrow to take the shape of a curve.
 - [x] Allow lines to be curved. When line is selected, only show corner points. At mouse over, show a center control point, upon clicking break the line in the middle. Also let two handles in that position to change the gradient at that point allowing line to take the shape of a curve.
 - [x] Draggable arrowhead size control (yellow handle near arrowhead tip)
-- [ ] Undo/redo (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z)
+- [x] Undo/redo (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z)
+- [x] Select all (Cmd/Ctrl+A)
+- [x] Opacity applies only to fill (not stroke/text)
+
+## v0.9 - Polisher
 - [ ] PNG export with configurable resolution
 - [ ] Transparent background in PNG export
 - [ ] Download SVG file

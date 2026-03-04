@@ -142,6 +142,23 @@ export function Canvas() {
       const hasModifier = e.metaKey || e.ctrlKey
 
       if (hasModifier) {
+        if ((e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+          e.preventDefault()
+          useStore.getState().undo()
+          return
+        }
+        if ((e.key === 'z' || e.key === 'Z') && e.shiftKey) {
+          e.preventDefault()
+          useStore.getState().redo()
+          return
+        }
+        if (e.key === 'a' || e.key === 'A') {
+          e.preventDefault()
+          useStore.getState().setActiveTool('pointer')
+          const { objects } = useStore.getState()
+          useStore.getState().setSelectedIds(new Set(objects.map((o) => o.id)))
+          return
+        }
         switch (e.key) {
           case 'd':
           case 'D': {

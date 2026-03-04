@@ -80,10 +80,16 @@ function persistStyles(state: { strokeColor: string; fillColor: string; strokeWi
 const savedStyles = loadStyles()
 const savedDrawing = loadDrawing()
 
+const MAX_HISTORY = 50
+
 interface DoodlerState {
   // Scene
   objects: SceneObject[]
   selectedIds: Set<string>
+
+  // History (undo/redo)
+  _history: SceneObject[][]
+  _future: SceneObject[][]
 
   // Tool
   activeTool: ToolType
@@ -109,6 +115,9 @@ interface DoodlerState {
   marqueeRect: BoundingBox | null
 
   // Actions
+  saveSnapshot: () => void
+  undo: () => void
+  redo: () => void
   addObject: (obj: SceneObject) => void
   deleteObjects: (ids: Set<string>) => void
   moveObjects: (ids: Set<string>, dx: number, dy: number) => void
@@ -157,12 +166,50 @@ export const useStore = create<DoodlerState>((set) => ({
   activeTextInput: null,
   editingTextId: null,
   marqueeRect: null,
+  _history: [],
+  _future: [],
+
+  saveSnapshot: () =>
+    set((state) => ({
+      _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+      _future: [],
+    })),
+
+  undo: () =>
+    set((state) => {
+      if (state._history.length === 0) return state
+      const previous = state._history[state._history.length - 1]
+      return {
+        _history: state._history.slice(0, -1),
+        _future: [...state._future, structuredClone(state.objects)],
+        objects: previous,
+        selectedIds: new Set(),
+      }
+    }),
+
+  redo: () =>
+    set((state) => {
+      if (state._future.length === 0) return state
+      const next = state._future[state._future.length - 1]
+      return {
+        _future: state._future.slice(0, -1),
+        _history: [...state._history, structuredClone(state.objects)],
+        objects: next,
+        selectedIds: new Set(),
+      }
+    }),
 
   addObject: (obj) =>
-    set((state) => ({ objects: [...state.objects, obj] })),
+    set((state) => ({
+      _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+      _future: [],
+      objects: [...state.objects, obj],
+    })),
 
   deleteObjects: (ids) =>
     set((state) => ({
+      _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+      _future: [],
       objects: state.objects.filter((o) => !ids.has(o.id)),
       selectedIds: new Set(),
     })),
@@ -178,6 +225,8 @@ export const useStore = create<DoodlerState>((set) => ({
 
   updateTextObject: (id, text, boundingBox) =>
     set((state) => ({
+      _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+      _future: [],
       objects: state.objects.map((o) =>
         o.id === id && o.type === 'text' ? { ...o, text, boundingBox } : o
       ),
@@ -195,6 +244,8 @@ export const useStore = create<DoodlerState>((set) => ({
         }
       }
       return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
         objects: [...state.objects, ...clones],
         selectedIds: new Set(clones.map((c) => c.id)),
       }
@@ -208,7 +259,11 @@ export const useStore = create<DoodlerState>((set) => ({
           ;[arr[i], arr[i + 1]] = [arr[i + 1], arr[i]]
         }
       }
-      return { objects: arr }
+      return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
+        objects: arr,
+      }
     }),
 
   sendBackward: (ids) =>
@@ -219,7 +274,11 @@ export const useStore = create<DoodlerState>((set) => ({
           ;[arr[i], arr[i - 1]] = [arr[i - 1], arr[i]]
         }
       }
-      return { objects: arr }
+      return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
+        objects: arr,
+      }
     }),
 
   resizeObjects: (snapshots, anchor, scaleX, scaleY) =>
@@ -238,6 +297,8 @@ export const useStore = create<DoodlerState>((set) => ({
       const refBounds = getWorldBounds(ref)
       if (refBounds.width === 0 || refBounds.height === 0) return state
       return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
         objects: state.objects.map((o) => {
           if (!ids.has(o.id) || o.id === ref.id) return o
           const objBounds = getWorldBounds(o)
@@ -300,6 +361,8 @@ export const useStore = create<DoodlerState>((set) => ({
       }
 
       return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
         objects: state.objects.map((o) => {
           const d = deltas.get(o.id)
           if (!d || (d.dx === 0 && d.dy === 0)) return o
@@ -338,6 +401,8 @@ export const useStore = create<DoodlerState>((set) => ({
       }
 
       return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
         objects: state.objects.map((o) => {
           const d = deltas.get(o.id)
           if (!d || (d.dx === 0 && d.dy === 0)) return o
@@ -386,6 +451,8 @@ export const useStore = create<DoodlerState>((set) => ({
   setEditingTextId: (id) => set({ editingTextId: id }),
   updateObjectStyles: (ids, styles) =>
     set((state) => ({
+      _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+      _future: [],
       objects: state.objects.map((o) => {
         if (!ids.has(o.id)) return o
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -456,13 +523,15 @@ export const useStore = create<DoodlerState>((set) => ({
       }),
     })),
 
-  clearDrawing: () => set({
+  clearDrawing: () => set((state) => ({
+    _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+    _future: [],
     objects: [],
     selectedIds: new Set(),
     viewport: { offsetX: 0, offsetY: 0, scale: 1 },
     activeTextInput: null,
     editingTextId: null,
-  }),
+  })),
 }))
 
 // Auto-save drawing to localStorage on objects/viewport changes
