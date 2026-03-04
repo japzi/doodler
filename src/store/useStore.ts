@@ -132,6 +132,7 @@ interface DoodlerState {
   setActiveTextInput: (input: { x: number; y: number } | null) => void
   setEditingTextId: (id: string | null) => void
   clearDrawing: () => void
+  updateObjectStyles: (ids: Set<string>, styles: { color?: string; fillColor?: string; strokeWidth?: number; opacity?: number }) => void
 }
 
 export const useStore = create<DoodlerState>((set) => ({
@@ -371,6 +372,19 @@ export const useStore = create<DoodlerState>((set) => ({
   setActiveShapePreview: (preview) => set({ activeShapePreview: preview }),
   setActiveTextInput: (input) => set({ activeTextInput: input }),
   setEditingTextId: (id) => set({ editingTextId: id }),
+  updateObjectStyles: (ids, styles) =>
+    set((state) => ({
+      objects: state.objects.map((o) => {
+        if (!ids.has(o.id)) return o
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const updated: any = { ...o }
+        if (styles.color !== undefined) updated.color = styles.color
+        if (styles.opacity !== undefined) updated.opacity = styles.opacity
+        if (styles.strokeWidth !== undefined && o.type !== 'text') updated.strokeWidth = styles.strokeWidth
+        if (styles.fillColor !== undefined && (o.type === 'rectangle' || o.type === 'ellipse')) updated.fillColor = styles.fillColor
+        return updated as SceneObject
+      }),
+    })),
   clearDrawing: () => set({
     objects: [],
     selectedIds: new Set(),

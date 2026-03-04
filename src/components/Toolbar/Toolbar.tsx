@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import './Toolbar.css'
 import { useStore } from '../../store/useStore'
 import { exportProject, importProject } from '../../store/useStore'
@@ -19,8 +19,28 @@ export function Toolbar() {
   const setOpacity = useStore((s) => s.setOpacity)
   const setFontSize = useStore((s) => s.setFontSize)
   const clearDrawing = useStore((s) => s.clearDrawing)
+  const updateObjectStyles = useStore((s) => s.updateObjectStyles)
+  const selectedIds = useStore((s) => s.selectedIds)
+  const objects = useStore((s) => s.objects)
   const [toast, setToast] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const hasSelection = selectedIds.size > 0
+  const selectedObjects = hasSelection ? objects.filter((o) => selectedIds.has(o.id)) : []
+  const selectedHasFill = selectedObjects.some((o) => o.type === 'rectangle' || o.type === 'ellipse')
+  const selectedHasStrokeWidth = selectedObjects.some((o) => o.type !== 'text')
+
+  // Sync toolbar to first selected object's styles
+  useEffect(() => {
+    if (!hasSelection) return
+    const first = objects.find((o) => selectedIds.has(o.id))
+    if (!first) return
+    setStrokeColor(first.color)
+    setOpacity(first.opacity ?? 1)
+    if ('strokeWidth' in first && first.strokeWidth !== undefined) setStrokeWidth(first.strokeWidth)
+    if ('fillColor' in first && first.fillColor !== undefined) setFillColor(first.fillColor)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIds])
 
   const handleNewDrawing = useCallback(() => {
     if (!window.confirm('Start a new drawing? Unsaved changes will be lost.')) return
@@ -132,17 +152,27 @@ export function Toolbar() {
 
         <div className="toolbar__divider" />
 
-        <ColorPicker value={strokeColor} onChange={setStrokeColor} label="Stroke" />
+        <ColorPicker value={strokeColor} onChange={(color) => {
+          setStrokeColor(color)
+          if (hasSelection) updateObjectStyles(selectedIds, { color })
+        }} label="Stroke" />
 
-        {(activeTool === 'rectangle' || activeTool === 'ellipse') && (
-          <ColorPicker value={fillColor} onChange={setFillColor} allowNone label="Fill" />
+        {(activeTool === 'rectangle' || activeTool === 'ellipse' || (activeTool === 'pointer' && selectedHasFill)) && (
+          <ColorPicker value={fillColor} onChange={(color) => {
+            setFillColor(color)
+            if (hasSelection) updateObjectStyles(selectedIds, { fillColor: color })
+          }} allowNone label="Fill" />
         )}
 
-        {(activeTool === 'pen' || isShapeTool) && (
+        {(activeTool === 'pen' || isShapeTool || (activeTool === 'pointer' && selectedHasStrokeWidth)) && (
           <select
             className="toolbar__stroke-width-select"
             value={strokeWidth}
-            onChange={(e) => setStrokeWidth(Number(e.target.value))}
+            onChange={(e) => {
+              const w = Number(e.target.value)
+              setStrokeWidth(w)
+              if (hasSelection) updateObjectStyles(selectedIds, { strokeWidth: w })
+            }}
             title="Stroke width"
           >
             {[1, 2, 3, 4, 6, 8].map((w) => (
@@ -158,7 +188,11 @@ export function Toolbar() {
             min={0}
             max={100}
             value={Math.round(opacity * 100)}
-            onChange={(e) => setOpacity(Number(e.target.value) / 100)}
+            onChange={(e) => {
+              const o = Number(e.target.value) / 100
+              setOpacity(o)
+              if (hasSelection) updateObjectStyles(selectedIds, { opacity: o })
+            }}
             title="Opacity"
           />
           <span className="toolbar__opacity-label">{Math.round(opacity * 100)}%</span>
