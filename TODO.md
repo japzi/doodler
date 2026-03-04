@@ -97,8 +97,8 @@
 - [x] Opacity applies only to fill (not stroke/text)
 
 ## v0.9 - Polisher
-- [ ] PNG export with configurable resolution
-- [ ] Transparent background in PNG export
+- [x] PNG export with configurable resolution
+- [x] Transparent background in PNG export
 - [ ] Download SVG file
 - [ ] Canvas grid/dot pattern (toggleable)
 - [ ] Zoom level indicator

@@ -3,6 +3,7 @@ import './Toolbar.css'
 import { useStore } from '../../store/useStore'
 import { exportProject, importProject } from '../../store/useStore'
 import { copySvgToClipboard } from '../../export/svgExport'
+import { exportPng } from '../../export/pngExport'
 import { ColorPicker } from './ColorPicker'
 
 export function Toolbar() {
@@ -70,6 +71,17 @@ export function Toolbar() {
     const objects = useStore.getState().objects
     const success = await copySvgToClipboard(objects)
     setToast(success ? 'SVG copied to clipboard!' : 'Failed to copy SVG')
+    setTimeout(() => setToast(null), 2000)
+  }, [])
+
+  const handleExportPng = useCallback(async () => {
+    const objects = useStore.getState().objects
+    try {
+      await exportPng(objects, 2, true)
+      setToast('PNG exported!')
+    } catch {
+      setToast('Failed to export PNG')
+    }
     setTimeout(() => setToast(null), 2000)
   }, [])
 
@@ -228,6 +240,18 @@ export function Toolbar() {
             <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
           </svg>
           Copy SVG
+        </button>
+        <button
+          className="toolbar__copy-button"
+          onClick={handleExportPng}
+          title="Export as PNG (2x resolution, transparent)"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          PNG
         </button>
 
         <div className="toolbar__divider" />
