@@ -124,7 +124,9 @@ interface DoodlerState {
   updateTextObject: (id: string, text: string, boundingBox: BoundingBox) => void
   duplicateObjects: (ids: Set<string>) => void
   bringForward: (ids: Set<string>) => void
+  bringToFront: (ids: Set<string>) => void
   sendBackward: (ids: Set<string>) => void
+  sendToBack: (ids: Set<string>) => void
   resizeObjects: (snapshots: Map<string, SceneObject>, anchor: Point, scaleX: number, scaleY: number) => void
   matchSize: (ids: Set<string>, mode: 'width' | 'height' | 'both') => void
   alignObjects: (ids: Set<string>, alignment: 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom') => void
@@ -266,6 +268,17 @@ export const useStore = create<DoodlerState>((set) => ({
       }
     }),
 
+  bringToFront: (ids) =>
+    set((state) => {
+      const rest = state.objects.filter((o) => !ids.has(o.id))
+      const moved = state.objects.filter((o) => ids.has(o.id))
+      return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
+        objects: [...rest, ...moved],
+      }
+    }),
+
   sendBackward: (ids) =>
     set((state) => {
       const arr = [...state.objects]
@@ -278,6 +291,17 @@ export const useStore = create<DoodlerState>((set) => ({
         _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
         _future: [],
         objects: arr,
+      }
+    }),
+
+  sendToBack: (ids) =>
+    set((state) => {
+      const moved = state.objects.filter((o) => ids.has(o.id))
+      const rest = state.objects.filter((o) => !ids.has(o.id))
+      return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
+        objects: [...moved, ...rest],
       }
     }),
 
