@@ -115,6 +115,14 @@
 - [x] Shadow persisted with last-used styles (localStorage)
 - [x] Undo/redo support for shadow toggle and offset changes
 
+## v0.9.2 — Testing & CI `done`
+
+- [x] Vitest unit test suite (47 tests)
+- [x] Bounding box utility tests (rect, line, curved arrow, compute, intersect, world bounds)
+- [x] Resize logic tests (rectangle, line, group recursive)
+- [x] Zustand store action tests (undo/redo, delete, duplicate, copy/cut/paste, z-order, group/ungroup)
+- [x] GitHub Actions CI workflow (type-check + build + test on push/PR)
+
 ## v1.0 — Launch
 
 - [ ] Performance tuning (500+ objects smooth)
