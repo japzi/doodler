@@ -43,7 +43,7 @@ export async function exportPng(
       const pngDataUrl = canvas.toDataURL('image/png')
       const a = document.createElement('a')
       a.href = pngDataUrl
-      a.download = 'doodler-drawing.png'
+      a.download = 'lumidraw-drawing.png'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

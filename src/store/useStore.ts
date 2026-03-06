@@ -7,8 +7,8 @@ import { generateRoughLine, generateRoughCurvedLine, generateRoughArrow, generat
 import { DEFAULT_FONT_FAMILY } from '../fonts/fontRegistry'
 import { measureTextBounds } from '../utils/measureText'
 
-const STYLES_KEY = 'doodler-styles'
-const DRAWING_KEY = 'doodler-drawing'
+const STYLES_KEY = 'lumidraw-styles'
+const DRAWING_KEY = 'lumidraw-drawing'
 
 function loadDrawing(): { objects: SceneObject[]; viewport: ViewportTransform } | null {
   try {
@@ -33,7 +33,7 @@ export function exportProject() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'doodler-drawing.json'
+  a.download = 'lumidraw-drawing.json'
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -84,7 +84,7 @@ const savedDrawing = loadDrawing()
 
 const MAX_HISTORY = 50
 
-interface DoodlerState {
+interface LumiDrawState {
   // Scene
   objects: SceneObject[]
   selectedIds: Set<string>
@@ -179,7 +179,7 @@ interface DoodlerState {
   ungroupObjects: (ids: Set<string>) => void
 }
 
-export const useStore = create<DoodlerState>((set) => ({
+export const useStore = create<LumiDrawState>((set) => ({
   objects: savedDrawing?.objects ?? [],
   selectedIds: new Set(),
   activeTool: 'pen',
