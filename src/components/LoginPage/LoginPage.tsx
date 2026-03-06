@@ -44,7 +44,7 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <h1 className="login-title">Lumi Draw</h1>
+        <h1 className="login-title">LumiDraw</h1>
         <p className="login-subtitle">Sign in to start drawing</p>
 
         <form className="login-form" onSubmit={handleSubmit}>
