@@ -179,6 +179,33 @@ export function Canvas() {
           return
         }
         switch (e.key) {
+          case 'c':
+          case 'C': {
+            e.preventDefault()
+            const { selectedIds, copyObjects } = useStore.getState()
+            if (selectedIds.size > 0) {
+              copyObjects(selectedIds)
+            }
+            return
+          }
+          case 'x':
+          case 'X': {
+            e.preventDefault()
+            const { selectedIds, cutObjects } = useStore.getState()
+            if (selectedIds.size > 0) {
+              cutObjects(selectedIds)
+            }
+            return
+          }
+          case 'v':
+          case 'V': {
+            e.preventDefault()
+            const { _clipboard, pasteObjects } = useStore.getState()
+            if (_clipboard.length > 0) {
+              pasteObjects()
+            }
+            return
+          }
           case 'd':
           case 'D': {
             e.preventDefault()

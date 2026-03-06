@@ -93,6 +93,10 @@ interface DoodlerState {
   _history: SceneObject[][]
   _future: SceneObject[][]
 
+  // Clipboard
+  _clipboard: SceneObject[]
+  _pasteCount: number
+
   // Tool
   activeTool: ToolType
   strokeColor: string
@@ -134,6 +138,9 @@ interface DoodlerState {
   moveObjects: (ids: Set<string>, dx: number, dy: number) => void
   updateTextObject: (id: string, text: string, boundingBox: BoundingBox) => void
   duplicateObjects: (ids: Set<string>) => void
+  copyObjects: (ids: Set<string>) => void
+  cutObjects: (ids: Set<string>) => void
+  pasteObjects: () => void
   bringForward: (ids: Set<string>) => void
   bringToFront: (ids: Set<string>) => void
   sendBackward: (ids: Set<string>) => void
@@ -197,6 +204,8 @@ export const useStore = create<DoodlerState>((set) => ({
   marqueeRect: null,
   _history: [],
   _future: [],
+  _clipboard: [],
+  _pasteCount: 0,
 
   saveSnapshot: () =>
     set((state) => ({
@@ -279,6 +288,60 @@ export const useStore = create<DoodlerState>((set) => ({
         }
       }
       return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
+        objects: [...state.objects, ...clones],
+        selectedIds: new Set(clones.map((c) => c.id)),
+      }
+    }),
+
+  copyObjects: (ids) =>
+    set((state) => {
+      const clones: SceneObject[] = []
+      for (const obj of state.objects) {
+        if (ids.has(obj.id)) {
+          clones.push(structuredClone(obj))
+        }
+      }
+      return { _clipboard: clones, _pasteCount: 0 }
+    }),
+
+  cutObjects: (ids) =>
+    set((state) => {
+      const clones: SceneObject[] = []
+      for (const obj of state.objects) {
+        if (ids.has(obj.id)) {
+          clones.push(structuredClone(obj))
+        }
+      }
+      return {
+        _clipboard: clones,
+        _pasteCount: 0,
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
+        objects: state.objects.filter((o) => !ids.has(o.id)),
+        selectedIds: new Set(),
+      }
+    }),
+
+  pasteObjects: () =>
+    set((state) => {
+      if (state._clipboard.length === 0) return state
+      const offset = (state._pasteCount + 1) * 20
+      const clones: SceneObject[] = state._clipboard.map((obj) => {
+        const clone = structuredClone(obj)
+        clone.id = generateId()
+        clone.position = { x: clone.position.x + offset, y: clone.position.y + offset }
+        if (clone.type === 'group') {
+          clone.children = clone.children.map((child: SceneObject) => ({
+            ...child,
+            id: generateId(),
+          }))
+        }
+        return clone
+      })
+      return {
+        _pasteCount: state._pasteCount + 1,
         _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
         _future: [],
         objects: [...state.objects, ...clones],
