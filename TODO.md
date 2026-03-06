@@ -122,6 +122,8 @@
 - [x] Resize logic tests (rectangle, line, group recursive)
 - [x] Zustand store action tests (undo/redo, delete, duplicate, copy/cut/paste, z-order, group/ungroup)
 - [x] GitHub Actions CI workflow (type-check + build + test on push/PR)
+- [x] Playwright E2E tests (22 tests) — tool selection, shape drawing, undo/redo, delete, selection, duplicate, toolbar, zoom
+- [x] CI runs E2E tests (Chromium-only)
 
 ## v1.0 — Launch
 

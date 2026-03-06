@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 import { viteObfuscateFile } from 'vite-plugin-obfuscator'
 
 export default defineConfig({
+  test: {
+    exclude: ['e2e/**', 'node_modules/**'],
+  },
   plugins: [
     react(),
     viteObfuscateFile({
