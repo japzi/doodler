@@ -19,6 +19,7 @@ async function getObjectCount(page: Page): Promise<number> {
 }
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => { (window as any).__E2E_BYPASS_AUTH__ = true; });
   await page.goto('/');
   await clearStorage(page);
   await page.reload();
