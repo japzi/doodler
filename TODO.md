@@ -124,6 +124,7 @@
 - [x] GitHub Actions CI workflow (type-check + build + test on push/PR)
 - [x] Playwright E2E tests (22 tests) — tool selection, shape drawing, undo/redo, delete, selection, duplicate, toolbar, zoom
 - [x] CI runs E2E tests (Chromium-only)
+- [x] Cloudflare Pages hosting with auto-deploy from GitHub Actions on push to master
 
 ## v1.0 — Launch
 
