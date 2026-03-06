@@ -7,6 +7,7 @@ import { exportPng } from '../../export/pngExport'
 import { ColorPicker } from './ColorPicker'
 import { FontPicker } from './FontPicker'
 import { DEFAULT_FONT_FAMILY } from '../../fonts/fontRegistry'
+import { supabase } from '../../lib/supabase'
 
 export function Toolbar() {
   const activeTool = useStore((s) => s.activeTool)
@@ -457,6 +458,21 @@ export function Toolbar() {
           style={{ display: 'none' }}
           onChange={handleLoad}
         />
+
+        <div className="toolbar__divider" />
+
+        <button
+          className="toolbar__copy-button toolbar__sign-out"
+          onClick={() => supabase.auth.signOut()}
+          data-tooltip="Sign out"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Sign Out
+        </button>
       </div>
 
       {toast && <div className="toast">{toast}</div>}

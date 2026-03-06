@@ -131,6 +131,11 @@
   background: #f0f0f0;
 }
 
+.toolbar__sign-out:hover {
+  background: #fdecea;
+  color: #d32f2f;
+}
+
 /* Styled tooltips */
 [data-tooltip] {
   position: relative;
