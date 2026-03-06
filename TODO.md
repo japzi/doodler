@@ -11,7 +11,6 @@
 - [x] Copy SVG to clipboard
 - [x] Keyboard shortcuts (V → pointer, P → pen)
 - [x] Toast notification on copy
-- [ ] Pinch-to-zoom gesture support
 - [x] Zoom +/- controls in UI
 
 ## v0.2 — Shapes `done`
@@ -119,8 +118,6 @@
 ## v1.0 — Launch
 
 - [ ] Performance tuning (500+ objects smooth)
-- [ ] WCAG 2.1 AA accessibility
-- [ ] PWA / service worker for offline use
 - [ ] Documentation and contribution guidelines
 - [ ] Public release
 
