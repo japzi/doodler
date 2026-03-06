@@ -40,6 +40,10 @@ export function Toolbar() {
   const objects = useStore((s) => s.objects)
   const showGrid = useStore((s) => s.showGrid)
   const toggleGrid = useStore((s) => s.toggleGrid)
+  const undo = useStore((s) => s.undo)
+  const redo = useStore((s) => s.redo)
+  const canUndo = useStore((s) => s._history.length > 0)
+  const canRedo = useStore((s) => s._future.length > 0)
   const [toast, setToast] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -131,6 +135,31 @@ export function Toolbar() {
   return (
     <>
       <div className="toolbar">
+        <button
+          className="toolbar__button"
+          onClick={undo}
+          disabled={!canUndo}
+          data-tooltip="Undo (⌘Z)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="1 4 1 10 7 10" />
+            <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+          </svg>
+        </button>
+        <button
+          className="toolbar__button"
+          onClick={redo}
+          disabled={!canRedo}
+          data-tooltip="Redo (⌘⇧Z)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 11-2.13-9.36L23 10" />
+          </svg>
+        </button>
+
+        <div className="toolbar__divider" />
+
         <button
           className={`toolbar__button ${activeTool === 'pointer' ? 'toolbar__button--active' : ''}`}
           onClick={() => setActiveTool('pointer')}
@@ -371,6 +400,21 @@ export function Toolbar() {
             <circle cx="4" cy="20" r="1.5" />
             <circle cx="12" cy="20" r="1.5" />
             <circle cx="20" cy="20" r="1.5" />
+          </svg>
+        </button>
+        <button
+          className="toolbar__button"
+          onClick={() => {
+            setActiveTool('pointer')
+            const allIds = new Set(useStore.getState().objects.map((o) => o.id))
+            useStore.getState().setSelectedIds(allIds)
+          }}
+          disabled={objects.length === 0}
+          data-tooltip="Select All (⌘A)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 2" />
+            <polyline points="8 12 11 15 16 9" />
           </svg>
         </button>
 

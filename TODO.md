@@ -126,6 +126,13 @@
 - [x] CI runs E2E tests (Chromium-only)
 - [x] Cloudflare Pages hosting with auto-deploy from GitHub Actions on push to master
 
+## v0.9.3 — Mobile-Accessible Action Buttons `done`
+
+- [x] Undo button in toolbar (wired to existing undo, disabled when no history)
+- [x] Redo button in toolbar (wired to existing redo, disabled when no future)
+- [x] Select All button in toolbar utility section (switches to pointer, selects all objects)
+- [x] Delete button in SelectionActionBar (trash icon, removes selected objects)
+
 ## v1.0 — Launch
 
 - [ ] Performance tuning (500+ objects smooth)

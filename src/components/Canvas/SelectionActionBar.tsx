@@ -179,6 +179,15 @@ export function SelectionActionBar() {
           )}
         </>
       )}
+
+      <div className="selection-action-bar__divider" />
+      <button className="selection-action-bar__button" onClick={() => useStore.getState().deleteObjects(selectedIds)} title="Delete (⌫)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 4h12" />
+          <path d="M5 4V2.5a1 1 0 011-1h4a1 1 0 011 1V4" />
+          <path d="M3 4l1 10.5a1 1 0 001 .5h6a1 1 0 001-.5L13 4" />
+        </svg>
+      </button>
     </div>
   )
 }
