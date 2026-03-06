@@ -65,6 +65,15 @@
   text-align: left;
 }
 
+.login-success {
+  padding: 10px 14px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 13px;
+  border-radius: 8px;
+  text-align: left;
+}
+
 .login-submit {
   height: 44px;
   border: none;

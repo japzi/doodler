@@ -7,19 +7,29 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
+    setSuccess(null)
     setLoading(true)
 
-    const { error } = isSignUp
-      ? await supabase.auth.signUp({ email, password })
-      : await supabase.auth.signInWithPassword({ email, password })
-
-    if (error) {
-      setError(error.message)
+    if (isSignUp) {
+      const { data, error } = await supabase.auth.signUp({ email, password })
+      if (error) {
+        setError(error.message)
+      } else if (data.user && data.user.identities?.length === 0) {
+        setError('An account with this email already exists. Try signing in instead.')
+      } else {
+        setSuccess('Check your email for a confirmation link, then come back and sign in.')
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setError(error.message)
+      }
     }
     setLoading(false)
   }
@@ -57,6 +67,7 @@ export function LoginPage() {
           />
 
           {error && <div className="login-error">{error}</div>}
+          {success && <div className="login-success">{success}</div>}
 
           <button className="login-submit" type="submit" disabled={loading}>
             {loading ? 'Please wait...' : isSignUp ? 'Sign Up' : 'Sign In'}
