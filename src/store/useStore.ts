@@ -5,6 +5,7 @@ import { generateId } from '../utils/idGenerator'
 import { applyResize } from '../utils/resize'
 import { getWorldBounds, boundingBoxFromLine, boundingBoxFromCurvedArrow, boundingBoxFromPolygon } from '../utils/boundingBox'
 import { generateRoughLine, generateRoughCurvedLine, generateRoughArrow, generateRoughCurvedArrow, generateRoughPolygon } from '../rendering/roughPath'
+import { generateStrokePathData } from '../rendering/sketchyPath'
 import { DEFAULT_FONT_FAMILY } from '../fonts/fontRegistry'
 import { measureTextBounds } from '../utils/measureText'
 
@@ -722,7 +723,12 @@ export const useStore = create<LumiDrawState>((set) => ({
         const updated: any = { ...o }
         if (styles.color !== undefined) updated.color = styles.color
         if (styles.opacity !== undefined) updated.opacity = styles.opacity
-        if (styles.strokeWidth !== undefined && o.type !== 'text') updated.strokeWidth = styles.strokeWidth
+        if (styles.strokeWidth !== undefined && o.type !== 'text') {
+          updated.strokeWidth = styles.strokeWidth
+          if (o.type === 'pen') {
+            updated.pathData = generateStrokePathData(o.points, styles.strokeWidth * 3)
+          }
+        }
         if (styles.fillColor !== undefined && (o.type === 'rectangle' || o.type === 'ellipse' || o.type === 'polygon')) updated.fillColor = styles.fillColor
         if (styles.shadow !== undefined && (o.type === 'rectangle' || o.type === 'ellipse' || o.type === 'polygon')) {
           if (styles.shadow === null) {

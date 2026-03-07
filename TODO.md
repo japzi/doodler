@@ -198,6 +198,15 @@
 - [x] SVG export renders rotation-independent shadow and hatch direction
 - [x] All 80 unit tests and 22 e2e tests passing
 
+## v0.9.9 — Pen Stroke Width `done`
+
+- [x] Stroke width dropdown scales pen tool thickness (via `perfect-freehand` `size` parameter)
+- [x] Mapping: `size = strokeWidth × 3` (default strokeWidth=2 → size=6, matching previous behavior)
+- [x] Live preview reflects selected stroke width during drawing
+- [x] Resize preserves pen stroke thickness
+- [x] Changing stroke width on existing pen objects regenerates path geometry
+- [x] All 92 unit tests passing
+
 ## v1.0 — Launch
 
 - [ ] Performance tuning (500+ objects smooth)

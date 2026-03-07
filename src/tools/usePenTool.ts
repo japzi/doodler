@@ -32,7 +32,7 @@ export function usePenTool() {
       return
     }
 
-    const pathData = generateStrokePathData(activeStrokePoints)
+    const pathData = generateStrokePathData(activeStrokePoints, strokeWidth * 3)
     const boundingBox = computeBoundingBox(activeStrokePoints)
 
     addObject({

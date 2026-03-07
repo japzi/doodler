@@ -227,7 +227,7 @@ export function applyResize(obj: SceneObject, anchor: Point, scaleX: number, sca
         ...obj,
         points: localPoints,
         position: { x: bb.x, y: bb.y },
-        pathData: generateStrokePathData(localPoints),
+        pathData: generateStrokePathData(localPoints, (obj.strokeWidth ?? 2) * 3),
         boundingBox: computeBoundingBox(localPoints),
       }
       break

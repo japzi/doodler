@@ -2,17 +2,16 @@ import getStroke from 'perfect-freehand'
 import type { Point } from '../types/scene'
 
 const STROKE_OPTIONS = {
-  size: 6,
   thinning: 0.5,
   smoothing: 0.5,
   streamline: 0.5,
   simulatePressure: true,
 }
 
-export function generateStrokePathData(points: Point[]): string {
+export function generateStrokePathData(points: Point[], size = 6): string {
   const strokePoints = getStroke(
     points.map((p) => [p.x, p.y, p.pressure ?? 0.5]),
-    STROKE_OPTIONS
+    { ...STROKE_OPTIONS, size }
   )
 
   if (strokePoints.length === 0) return ''
