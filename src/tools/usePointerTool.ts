@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react'
 import { useStore } from '../store/useStore'
 import { getObjectIdFromEvent } from '../utils/hitTest'
 import { boxesIntersect, getWorldBounds } from '../utils/boundingBox'
-import type { Point, SceneObject, ArrowShape, LineShape, BoundingBox } from '../types/scene'
+import type { Point, SceneObject, ArrowShape, LineShape, PolygonShape, BoundingBox } from '../types/scene'
 import { snapToGrid } from '../utils/grid'
 
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se'
@@ -32,6 +32,14 @@ export function usePointerTool() {
   const resizeOriginalCorner = useRef<Point | null>(null)
   const resizeSnapshots = useRef<Map<string, SceneObject> | null>(null)
 
+  // Polygon handle drag state
+  const polygonHandleDrag = useRef<{
+    objId: string
+    vertexIndex: number
+    snapshot: PolygonShape
+    startPoint: Point
+  } | null>(null)
+
   // Line/Arrow handle drag state
   const lineArrowHandleDrag = useRef<{
     objId: string
@@ -47,6 +55,58 @@ export function usePointerTool() {
     shiftOnDown.current = e.shiftKey
 
     const target = e.target as SVGElement
+
+    // Check for polygon handle
+    const polygonHandleAttr = target.closest('[data-polygon-handle]')?.getAttribute('data-polygon-handle')
+    if (polygonHandleAttr) {
+      const { objects, selectedIds } = useStore.getState()
+      const objId = [...selectedIds][0]
+      const obj = objects.find((o) => o.id === objId && o.type === 'polygon') as PolygonShape | undefined
+      if (!obj) return
+
+      if (polygonHandleAttr === 'delete-vertex') {
+        const vertexIndex = useStore.getState().selectedPolygonVertex
+        if (vertexIndex !== null && obj.points.length > 3) {
+          useStore.getState().saveSnapshot()
+          const worldPoints = obj.points.map((p) => ({ x: obj.position.x + p.x, y: obj.position.y + p.y }))
+          worldPoints.splice(vertexIndex, 1)
+          useStore.getState().updatePolygonGeometry(objId, worldPoints)
+          useStore.getState().setSelectedPolygonVertex(null)
+        }
+        return
+      }
+
+      if (polygonHandleAttr.startsWith('mid-')) {
+        const midIndex = parseInt(polygonHandleAttr.slice(4), 10)
+        useStore.getState().saveSnapshot()
+        const worldPoints = obj.points.map((p) => ({ x: obj.position.x + p.x, y: obj.position.y + p.y }))
+        const nextIndex = (midIndex + 1) % worldPoints.length
+        const midpoint = {
+          x: (worldPoints[midIndex].x + worldPoints[nextIndex].x) / 2,
+          y: (worldPoints[midIndex].y + worldPoints[nextIndex].y) / 2,
+        }
+        worldPoints.splice(nextIndex, 0, midpoint)
+        useStore.getState().updatePolygonGeometry(objId, worldPoints)
+        return
+      }
+
+      if (polygonHandleAttr.startsWith('vertex-')) {
+        const vertexIndex = parseInt(polygonHandleAttr.slice(7), 10)
+        // Start vertex drag
+        useStore.getState().saveSnapshot()
+        useStore.getState().setSelectedPolygonVertex(vertexIndex)
+        polygonHandleDrag.current = {
+          objId,
+          vertexIndex,
+          snapshot: structuredClone(obj) as PolygonShape,
+          startPoint: scenePoint,
+        }
+        ;(e.target as SVGElement).setPointerCapture(e.pointerId)
+        return
+      }
+
+      return
+    }
 
     // Check for arrow handle
     const arrowHandleAttr = target.closest('[data-arrow-handle]')?.getAttribute('data-arrow-handle') as LineArrowHandleType | null
@@ -178,6 +238,20 @@ export function usePointerTool() {
       return
     }
 
+    // Polygon handle drag
+    if (polygonHandleDrag.current) {
+      const { objId, vertexIndex, snapshot, startPoint } = polygonHandleDrag.current
+      const dx = scenePoint.x - startPoint.x
+      const dy = scenePoint.y - startPoint.y
+      const worldPoints = snapshot.points.map((p, i) => {
+        const wx = snapshot.position.x + p.x + (i === vertexIndex ? dx : 0)
+        const wy = snapshot.position.y + p.y + (i === vertexIndex ? dy : 0)
+        return { x: wx, y: wy }
+      })
+      useStore.getState().updatePolygonGeometry(objId, worldPoints)
+      return
+    }
+
     // Line/Arrow handle drag
     if (lineArrowHandleDrag.current) {
       const { objId, objType, handleType, snapshot, startPoint } = lineArrowHandleDrag.current
@@ -292,6 +366,12 @@ export function usePointerTool() {
     // Pan cleanup
     if (isPanning.current) {
       isPanning.current = false
+      return
+    }
+
+    // Polygon handle drag cleanup
+    if (polygonHandleDrag.current) {
+      polygonHandleDrag.current = null
       return
     }
 

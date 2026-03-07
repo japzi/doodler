@@ -1,7 +1,7 @@
 import type { SceneObject, Point } from '../types/scene'
-import { generateRoughRect, generateRoughEllipse, generateRoughLine, generateRoughCurvedLine, generateRoughArrow, generateRoughCurvedArrow } from '../rendering/roughPath'
+import { generateRoughRect, generateRoughEllipse, generateRoughLine, generateRoughCurvedLine, generateRoughArrow, generateRoughCurvedArrow, generateRoughPolygon } from '../rendering/roughPath'
 import { generateStrokePathData } from '../rendering/sketchyPath'
-import { boundingBoxFromRect, boundingBoxFromLine, boundingBoxFromCurvedArrow, computeBoundingBox } from './boundingBox'
+import { boundingBoxFromRect, boundingBoxFromLine, boundingBoxFromCurvedArrow, boundingBoxFromPolygon, computeBoundingBox } from './boundingBox'
 import { measureTextBounds } from './measureText'
 
 function scalePoint(p: Point, anchor: Point, sx: number, sy: number): Point {
@@ -132,6 +132,24 @@ export function applyResize(obj: SceneObject, anchor: Point, scaleX: number, sca
         position: { x: ox, y: oy },
         pathData: generateRoughArrow(lx1, ly1, lx2, ly2, obj.arrowHeadSize),
         boundingBox: boundingBoxFromLine(lx1, ly1, lx2, ly2),
+      }
+    }
+    case 'polygon': {
+      const scaledPoints = obj.points.map((p) => {
+        const wp = { x: obj.position.x + p.x, y: obj.position.y + p.y }
+        return scalePoint(wp, anchor, scaleX, scaleY)
+      })
+      const bbox = boundingBoxFromPolygon(scaledPoints)
+      const normalizedPoints = scaledPoints.map((p) => ({
+        x: p.x - bbox.x,
+        y: p.y - bbox.y,
+      }))
+      return {
+        ...obj,
+        points: normalizedPoints,
+        position: { x: bbox.x, y: bbox.y },
+        pathData: generateRoughPolygon(normalizedPoints),
+        boundingBox: { x: 0, y: 0, width: bbox.width, height: bbox.height },
       }
     }
     case 'pen': {

@@ -52,7 +52,7 @@ export function Toolbar() {
 
   const hasSelection = selectedIds.size > 0
   const selectedObjects = hasSelection ? objects.filter((o) => selectedIds.has(o.id)) : []
-  const selectedHasFill = selectedObjects.some((o) => o.type === 'rectangle' || o.type === 'ellipse')
+  const selectedHasFill = selectedObjects.some((o) => o.type === 'rectangle' || o.type === 'ellipse' || o.type === 'polygon')
   const selectedHasStrokeWidth = selectedObjects.some((o) => o.type !== 'text')
   const selectedHasText = selectedObjects.some((o) => o.type === 'text')
   // Sync toolbar to first selected object's styles
@@ -65,7 +65,7 @@ export function Toolbar() {
     setOpacity(first.opacity ?? 1)
     if ('strokeWidth' in first && first.strokeWidth !== undefined) setStrokeWidth(first.strokeWidth)
     if ('fillColor' in first && first.fillColor !== undefined) setFillColor(first.fillColor)
-    if (first.type === 'rectangle' || first.type === 'ellipse') {
+    if (first.type === 'rectangle' || first.type === 'ellipse' || first.type === 'polygon') {
       setShadowEnabled(!!first.shadow)
       if (first.shadow) setShadowOffset(first.shadow.offset)
     }
@@ -174,7 +174,7 @@ export function Toolbar() {
     e.target.value = ''
   }, [])
 
-  const isShapeTool = activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'line' || activeTool === 'arrow'
+  const isShapeTool = activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'polygon'
 
   return (
     <>
@@ -275,6 +275,15 @@ export function Toolbar() {
             <polyline points="10 5 19 5 19 14" />
           </svg>
         </button>
+        <button
+          className={`toolbar__button ${activeTool === 'polygon' ? 'toolbar__button--active' : ''}`}
+          onClick={() => setActiveTool('polygon')}
+          data-tooltip="Polygon (S)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12,2 22,8.5 19,19.5 5,19.5 2,8.5" />
+          </svg>
+        </button>
 
         <div className="toolbar__divider" />
 
@@ -283,7 +292,7 @@ export function Toolbar() {
           if (hasSelection) updateObjectStyles(selectedIds, { color })
         }} label="Stroke" />
 
-        {(activeTool === 'rectangle' || activeTool === 'ellipse' || (activeTool === 'pointer' && selectedHasFill)) && (
+        {(activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'polygon' || (activeTool === 'pointer' && selectedHasFill)) && (
           <ColorPicker value={fillColor} onChange={(color) => {
             setFillColor(color)
             if (hasSelection) updateObjectStyles(selectedIds, { fillColor: color })
@@ -307,7 +316,7 @@ export function Toolbar() {
           </select>
         )}
 
-        {(activeTool === 'rectangle' || activeTool === 'ellipse' || (activeTool === 'pointer' && selectedHasFill)) && (
+        {(activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'polygon' || (activeTool === 'pointer' && selectedHasFill)) && (
           <div className="toolbar__opacity-control">
             <input
               className="toolbar__opacity-slider"
@@ -326,7 +335,7 @@ export function Toolbar() {
           </div>
         )}
 
-        {(activeTool === 'rectangle' || activeTool === 'ellipse' || (activeTool === 'pointer' && selectedHasFill)) && (
+        {(activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'polygon' || (activeTool === 'pointer' && selectedHasFill)) && (
           <>
             <button
               className={`toolbar__button ${shadowEnabled ? 'toolbar__button--active' : ''}`}

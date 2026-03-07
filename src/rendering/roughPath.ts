@@ -62,6 +62,13 @@ export function generateRoughArrow(x1: number, y1: number, x2: number, y2: numbe
   return `${linePath} ${drawableToPaths(head1)} ${drawableToPaths(head2)}`
 }
 
+export function generateRoughPolygon(points: { x: number; y: number }[]): string {
+  if (points.length < 3) return ''
+  const tuples: [number, number][] = points.map((p) => [p.x, p.y])
+  const drawable = generator.polygon(tuples, defaultOptions)
+  return drawableToPaths(drawable)
+}
+
 export function generateRoughHatchLines(x: number, y: number, w: number, h: number, spacing = 8): string[] {
   const step = spacing * Math.SQRT2
   const maxC = w + h

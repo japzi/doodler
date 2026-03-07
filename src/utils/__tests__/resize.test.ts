@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { applyResize } from '../resize'
-import type { RectangleShape, LineShape, ImageObject, GroupObject } from '../../types/scene'
+import type { RectangleShape, LineShape, PolygonShape, ImageObject, GroupObject } from '../../types/scene'
 
 function makeRect(overrides: Partial<RectangleShape> = {}): RectangleShape {
   return {
@@ -128,6 +128,46 @@ describe('applyResize', () => {
       if (result.type !== 'image') return
       expect(result.src).toBe('data:image/png;base64,abc')
       expect(result.color).toBe('#000')
+    })
+  })
+
+  describe('polygon', () => {
+    function makePolygon(overrides: Partial<PolygonShape> = {}): PolygonShape {
+      return {
+        type: 'polygon',
+        id: 'pg1',
+        points: [
+          { x: 0, y: 0 },
+          { x: 100, y: 0 },
+          { x: 100, y: 50 },
+          { x: 0, y: 50 },
+        ],
+        color: '#000',
+        pathData: '',
+        position: { x: 0, y: 0 },
+        boundingBox: { x: 0, y: 0, width: 100, height: 50 },
+        ...overrides,
+      }
+    }
+
+    it('scales all vertices from origin anchor', () => {
+      const poly = makePolygon()
+      const result = applyResize(poly, { x: 0, y: 0 }, 2, 2)
+      expect(result.type).toBe('polygon')
+      if (result.type !== 'polygon') return
+      // World point (100, 50) scaled 2x from origin → (200, 100)
+      expect(result.boundingBox.width).toBeCloseTo(200)
+      expect(result.boundingBox.height).toBeCloseTo(100)
+      expect(result.position).toEqual({ x: 0, y: 0 })
+    })
+
+    it('repositions around a non-origin anchor', () => {
+      const poly = makePolygon({ position: { x: 50, y: 50 } })
+      const result = applyResize(poly, { x: 50, y: 50 }, 2, 2)
+      if (result.type !== 'polygon') return
+      expect(result.position).toEqual({ x: 50, y: 50 })
+      expect(result.boundingBox.width).toBeCloseTo(200)
+      expect(result.boundingBox.height).toBeCloseTo(100)
     })
   })
 

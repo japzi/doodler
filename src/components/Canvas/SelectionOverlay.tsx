@@ -1,5 +1,5 @@
 import { useStore } from '../../store/useStore'
-import type { ArrowShape, LineShape } from '../../types/scene'
+import type { ArrowShape, LineShape, PolygonShape } from '../../types/scene'
 
 export function SelectionOverlay() {
   const selectedIds = useStore((s) => s.selectedIds)
@@ -7,6 +7,7 @@ export function SelectionOverlay() {
   const marqueeRect = useStore((s) => s.marqueeRect)
   const viewport = useStore((s) => s.viewport)
   const editingTextId = useStore((s) => s.editingTextId)
+  const selectedPolygonVertex = useStore((s) => s.selectedPolygonVertex)
 
   const padding = 8
   const handleSize = 8 / viewport.scale
@@ -19,8 +20,88 @@ export function SelectionOverlay() {
     if (selected.length > 0) {
       const isSingleArrow = selected.length === 1 && selected[0].type === 'arrow'
       const isSingleLine = selected.length === 1 && selected[0].type === 'line'
+      const isSinglePolygon = selected.length === 1 && selected[0].type === 'polygon'
 
-      if (isSingleArrow || isSingleLine) {
+      if (isSinglePolygon) {
+        const obj = selected[0] as PolygonShape
+        const ox = obj.position.x
+        const oy = obj.position.y
+        const midHandleRadius = 3.5 / viewport.scale
+        const deleteSize = 14 / viewport.scale
+
+        selectionEl = (
+          <>
+            {/* Vertex handles */}
+            {obj.points.map((p, i) => (
+              <circle
+                key={`v-${i}`}
+                data-polygon-handle={`vertex-${i}`}
+                cx={ox + p.x}
+                cy={oy + p.y}
+                r={handleRadius}
+                fill={selectedPolygonVertex === i ? '#4a90d9' : 'white'}
+                stroke="#4a90d9"
+                strokeWidth={1}
+                vectorEffect="non-scaling-stroke"
+                style={{ cursor: 'move' }}
+                pointerEvents="auto"
+              />
+            ))}
+            {/* Edge midpoint handles */}
+            {obj.points.map((p, i) => {
+              const next = obj.points[(i + 1) % obj.points.length]
+              const mx = ox + (p.x + next.x) / 2
+              const my = oy + (p.y + next.y) / 2
+              return (
+                <circle
+                  key={`m-${i}`}
+                  data-polygon-handle={`mid-${i}`}
+                  cx={mx}
+                  cy={my}
+                  r={midHandleRadius}
+                  fill="#4a90d9"
+                  stroke="white"
+                  strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                  style={{ cursor: 'pointer' }}
+                  pointerEvents="auto"
+                />
+              )
+            })}
+            {/* Delete button for selected vertex */}
+            {selectedPolygonVertex !== null && obj.points.length > 3 && (() => {
+              const vp = obj.points[selectedPolygonVertex]
+              if (!vp) return null
+              const bx = ox + vp.x - deleteSize / 2
+              const by = oy + vp.y - deleteSize - 4 / viewport.scale
+              return (
+                <g
+                  data-polygon-handle="delete-vertex"
+                  style={{ cursor: 'pointer' }}
+                  pointerEvents="auto"
+                >
+                  <rect
+                    x={bx} y={by}
+                    width={deleteSize} height={deleteSize}
+                    rx={2 / viewport.scale}
+                    fill="#e74c3c" stroke="none"
+                  />
+                  <line
+                    x1={bx + 3 / viewport.scale} y1={by + 3 / viewport.scale}
+                    x2={bx + deleteSize - 3 / viewport.scale} y2={by + deleteSize - 3 / viewport.scale}
+                    stroke="white" strokeWidth={1.5 / viewport.scale}
+                  />
+                  <line
+                    x1={bx + deleteSize - 3 / viewport.scale} y1={by + 3 / viewport.scale}
+                    x2={bx + 3 / viewport.scale} y2={by + deleteSize - 3 / viewport.scale}
+                    stroke="white" strokeWidth={1.5 / viewport.scale}
+                  />
+                </g>
+              )
+            })()}
+          </>
+        )
+      } else if (isSingleArrow || isSingleLine) {
         const obj = selected[0] as ArrowShape | LineShape
         const ox = obj.position.x
         const oy = obj.position.y

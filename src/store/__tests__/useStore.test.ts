@@ -26,6 +26,7 @@ vi.mock('../../rendering/roughPath', () => ({
   generateRoughCurvedLine: () => 'mock-path',
   generateRoughArrow: () => 'mock-path',
   generateRoughCurvedArrow: () => 'mock-path',
+  generateRoughPolygon: () => 'mock-path',
 }))
 
 // Mock sketchy path
@@ -45,7 +46,7 @@ vi.mock('../../fonts/fontRegistry', () => ({
 
 import { useStore, importProject } from '../useStore'
 import JSZip from 'jszip'
-import type { RectangleShape, ImageObject, GroupObject } from '../../types/scene'
+import type { RectangleShape, PolygonShape, ImageObject, GroupObject } from '../../types/scene'
 
 function makeRect(id: string, x = 0, y = 0): RectangleShape {
   return {
@@ -525,6 +526,81 @@ describe('useStore', () => {
 
       await importProject(file)
       expect(useStore.getState().projectName).toBe('my-sketch')
+    })
+  })
+
+  describe('polygon', () => {
+    function makePolygon(id: string, x = 0, y = 0): PolygonShape {
+      return {
+        type: 'polygon',
+        id,
+        points: [
+          { x: 0, y: 0 },
+          { x: 100, y: 0 },
+          { x: 100, y: 100 },
+          { x: 0, y: 100 },
+        ],
+        color: '#000',
+        pathData: 'mock-path',
+        position: { x, y },
+        boundingBox: { x: 0, y: 0, width: 100, height: 100 },
+      }
+    }
+
+    it('adds polygon object', () => {
+      const poly = makePolygon('p1', 50, 50)
+      useStore.getState().addObject(poly)
+      const state = useStore.getState()
+      expect(state.objects).toHaveLength(1)
+      expect(state.objects[0].type).toBe('polygon')
+    })
+
+    it('updatePolygonGeometry normalizes points and regenerates pathData', () => {
+      const poly = makePolygon('p1', 10, 20)
+      useStore.getState().addObject(poly)
+
+      // Move vertices to new world positions
+      const newWorldPoints = [
+        { x: 50, y: 50 },
+        { x: 150, y: 50 },
+        { x: 150, y: 150 },
+        { x: 50, y: 150 },
+      ]
+      useStore.getState().updatePolygonGeometry('p1', newWorldPoints)
+
+      const updated = useStore.getState().objects[0]
+      expect(updated.type).toBe('polygon')
+      if (updated.type !== 'polygon') return
+
+      // Position should be at min of world points
+      expect(updated.position).toEqual({ x: 50, y: 50 })
+      // Points should be relative (normalized)
+      expect(updated.points[0]).toEqual({ x: 0, y: 0 })
+      expect(updated.points[1]).toEqual({ x: 100, y: 0 })
+      // pathData should be regenerated
+      expect(updated.pathData).toBe('mock-path')
+      // Bounding box should be normalized
+      expect(updated.boundingBox).toEqual({ x: 0, y: 0, width: 100, height: 100 })
+    })
+
+    it('updateObjectStyles sets fillColor on polygon', () => {
+      const poly = makePolygon('p1')
+      useStore.getState().addObject(poly)
+      useStore.getState().updateObjectStyles(new Set(['p1']), { fillColor: '#ff0000' })
+
+      const updated = useStore.getState().objects[0]
+      if (updated.type !== 'polygon') return
+      expect(updated.fillColor).toBe('#ff0000')
+    })
+
+    it('updateObjectStyles sets shadow on polygon', () => {
+      const poly = makePolygon('p1')
+      useStore.getState().addObject(poly)
+      useStore.getState().updateObjectStyles(new Set(['p1']), { shadow: { offset: 8 } })
+
+      const updated = useStore.getState().objects[0]
+      if (updated.type !== 'polygon') return
+      expect(updated.shadow).toEqual({ offset: 8 })
     })
   })
 

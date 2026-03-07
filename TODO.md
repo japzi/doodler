@@ -156,6 +156,22 @@
 - [x] "New Drawing" resets project name to `'Untitled'`
 - [x] Unit tests for project name (4 new tests, 74 total)
 
+## v0.9.6 — Polygon Tool `done`
+
+- [x] Polygon drawing tool — multi-click to place vertices, double-click or Enter to close
+- [x] Sketchy polygon rendering (roughjs `generator.polygon()`)
+- [x] Live preview during drawing (dashed lines, vertex dots, close preview)
+- [x] Escape cancels in-progress polygon drawing
+- [x] Post-creation vertex editing — drag vertices to reshape
+- [x] Add vertices by clicking edge midpoints
+- [x] Delete vertices via X button or Delete/Backspace key (minimum 3 enforced)
+- [x] Fill color, opacity, and hatched drop shadow support
+- [x] Resize scales all vertices proportionally
+- [x] SVG/PNG export includes polygon (fill, stroke, shadow)
+- [x] Keyboard shortcut (S → polygon)
+- [x] Toolbar button (pentagon icon) with fill/shadow/opacity controls
+- [x] Unit tests (80 total, 7 new polygon tests)
+
 ## v1.0 — Launch
 
 - [ ] Performance tuning (500+ objects smooth)

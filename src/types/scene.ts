@@ -119,6 +119,20 @@ export interface ImageObject {
   boundingBox: BoundingBox
 }
 
+export interface PolygonShape {
+  type: 'polygon'
+  id: string
+  points: Point[]       // vertices relative to position
+  color: string
+  fillColor?: string
+  strokeWidth?: number
+  opacity?: number
+  shadow?: { offset: number }
+  pathData: string
+  position: { x: number; y: number }
+  boundingBox: BoundingBox
+}
+
 export interface GroupObject {
   type: 'group'
   id: string
@@ -127,7 +141,7 @@ export interface GroupObject {
   boundingBox: BoundingBox
 }
 
-export type SceneObject = PenStroke | RectangleShape | EllipseShape | LineShape | ArrowShape | TextObject | ImageObject | GroupObject
+export type SceneObject = PenStroke | RectangleShape | EllipseShape | LineShape | ArrowShape | PolygonShape | TextObject | ImageObject | GroupObject
 
 export interface ViewportTransform {
   offsetX: number
@@ -135,7 +149,7 @@ export interface ViewportTransform {
   scale: number
 }
 
-export type ToolType = 'pointer' | 'pen' | 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'text'
+export type ToolType = 'pointer' | 'pen' | 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'polygon' | 'text'
 
 export type ShapeToolType = 'rectangle' | 'ellipse' | 'line' | 'arrow'
 

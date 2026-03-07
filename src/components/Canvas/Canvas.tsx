@@ -7,9 +7,11 @@ import { ActiveShapeRenderer } from './ActiveShapeRenderer'
 import { SelectionOverlay } from './SelectionOverlay'
 import { TextInputOverlay } from './TextInputOverlay'
 import { SelectionActionBar } from './SelectionActionBar'
+import { ActivePolygonRenderer } from './ActivePolygonRenderer'
 import { usePenTool } from '../../tools/usePenTool'
 import { usePointerTool } from '../../tools/usePointerTool'
 import { useShapeTool } from '../../tools/useShapeTool'
+import { usePolygonTool } from '../../tools/usePolygonTool'
 import { useTextTool } from '../../tools/useTextTool'
 import { getObjectIdFromEvent } from '../../utils/hitTest'
 import type { Point } from '../../types/scene'
@@ -36,6 +38,7 @@ export function Canvas() {
   const penTool = usePenTool()
   const pointerTool = usePointerTool()
   const shapeTool = useShapeTool()
+  const polygonTool = usePolygonTool()
   const textTool = useTextTool()
 
   const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
@@ -52,6 +55,8 @@ export function Canvas() {
     const scenePoint = screenToScene(e.clientX, e.clientY)
     if (activeTool === 'pen') {
       penTool.onPointerDown(e, scenePoint)
+    } else if (activeTool === 'polygon') {
+      polygonTool.onPointerDown(e, scenePoint)
     } else if (activeTool === 'text') {
       textTool.onPointerDown(e, scenePoint)
     } else if (shapeTools.has(activeTool)) {
@@ -59,7 +64,7 @@ export function Canvas() {
     } else {
       pointerTool.onPointerDown(e, scenePoint)
     }
-  }, [activeTool, penTool, pointerTool, shapeTool, textTool])
+  }, [activeTool, penTool, polygonTool, pointerTool, shapeTool, textTool])
 
   const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     if (isPanning.current) {
@@ -76,6 +81,8 @@ export function Canvas() {
     const scenePoint = screenToScene(e.clientX, e.clientY)
     if (activeTool === 'pen') {
       penTool.onPointerMove(e, scenePoint)
+    } else if (activeTool === 'polygon') {
+      polygonTool.onPointerMove(e, scenePoint)
     } else if (activeTool === 'text') {
       textTool.onPointerMove()
     } else if (shapeTools.has(activeTool)) {
@@ -83,7 +90,7 @@ export function Canvas() {
     } else {
       pointerTool.onPointerMove(e, scenePoint)
     }
-  }, [activeTool, penTool, pointerTool, shapeTool, textTool])
+  }, [activeTool, penTool, polygonTool, pointerTool, shapeTool, textTool])
 
   const handlePointerUp = useCallback((_e: React.PointerEvent<SVGSVGElement>) => {
     if (isPanning.current) {
@@ -93,6 +100,8 @@ export function Canvas() {
 
     if (activeTool === 'pen') {
       penTool.onPointerUp()
+    } else if (activeTool === 'polygon') {
+      // polygon tool handles state via clicks, no pointer-up action needed
     } else if (activeTool === 'text') {
       textTool.onPointerUp()
     } else if (shapeTools.has(activeTool)) {
@@ -100,9 +109,14 @@ export function Canvas() {
     } else {
       pointerTool.onPointerUp()
     }
-  }, [activeTool, penTool, pointerTool, shapeTool, textTool])
+  }, [activeTool, penTool, polygonTool, pointerTool, shapeTool, textTool])
 
   const handleDoubleClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (activeTool === 'polygon') {
+      polygonTool.onDoubleClick(e)
+      return
+    }
+
     const objectId = getObjectIdFromEvent(e.nativeEvent)
     if (!objectId) return
 
@@ -110,7 +124,7 @@ export function Canvas() {
     if (obj?.type === 'text') {
       useStore.getState().setEditingTextId(objectId)
     }
-  }, [])
+  }, [activeTool, polygonTool])
 
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault()
@@ -259,6 +273,10 @@ export function Canvas() {
         case 'A':
           useStore.getState().setActiveTool('arrow')
           break
+        case 's':
+        case 'S':
+          useStore.getState().setActiveTool('polygon')
+          break
         case 't':
         case 'T':
           useStore.getState().setActiveTool('text')
@@ -267,11 +285,40 @@ export function Canvas() {
         case 'G':
           useStore.getState().toggleGrid()
           break
-        case 'Escape':
-          useStore.getState().setActiveTool('pointer')
+        case 'Enter': {
+          // Close polygon if in polygon drawing mode
+          const { activeTool: at, activePolygonPoints } = useStore.getState()
+          if (at === 'polygon' && activePolygonPoints && activePolygonPoints.length >= 3) {
+            polygonTool.closePolygon()
+          }
           break
+        }
+        case 'Escape': {
+          // Cancel polygon drawing if active, otherwise switch to pointer
+          const { activeTool: at, activePolygonPoints } = useStore.getState()
+          if (at === 'polygon' && activePolygonPoints) {
+            useStore.getState().setActivePolygonPoints(null)
+          } else {
+            useStore.getState().setActiveTool('pointer')
+          }
+          break
+        }
         case 'Delete':
         case 'Backspace': {
+          // Delete selected polygon vertex if applicable
+          const { selectedPolygonVertex: spv, selectedIds: sIds, objects: objs } = useStore.getState()
+          if (spv !== null && sIds.size === 1) {
+            const objId = [...sIds][0]
+            const obj = objs.find((o) => o.id === objId)
+            if (obj?.type === 'polygon' && obj.points.length > 3) {
+              useStore.getState().saveSnapshot()
+              const worldPoints = obj.points.map((p) => ({ x: obj.position.x + p.x, y: obj.position.y + p.y }))
+              worldPoints.splice(spv, 1)
+              useStore.getState().updatePolygonGeometry(objId, worldPoints)
+              useStore.getState().setSelectedPolygonVertex(null)
+              break
+            }
+          }
           const { selectedIds, deleteObjects } = useStore.getState()
           if (selectedIds.size > 0) {
             deleteObjects(selectedIds)
@@ -283,7 +330,7 @@ export function Canvas() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [polygonTool])
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -291,9 +338,11 @@ export function Canvas() {
 
   const cursorClass = activeTool === 'text'
     ? 'canvas--text'
-    : shapeTools.has(activeTool)
+    : activeTool === 'polygon'
       ? 'canvas--shape'
-      : `canvas--${activeTool}`
+      : shapeTools.has(activeTool)
+        ? 'canvas--shape'
+        : `canvas--${activeTool}`
 
   return (
     <>
@@ -333,6 +382,7 @@ export function Canvas() {
           <SceneRenderer />
           <ActiveStrokeRenderer />
           <ActiveShapeRenderer />
+          <ActivePolygonRenderer cursorPos={polygonTool.cursorPos} />
           <SelectionOverlay />
         </g>
       </svg>

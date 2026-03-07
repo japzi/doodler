@@ -3,8 +3,8 @@ import JSZip from 'jszip'
 import type { SceneObject, GroupObject, ImageObject, TextObject, Point, ViewportTransform, ToolType, ShapePreview, BoundingBox } from '../types/scene'
 import { generateId } from '../utils/idGenerator'
 import { applyResize } from '../utils/resize'
-import { getWorldBounds, boundingBoxFromLine, boundingBoxFromCurvedArrow } from '../utils/boundingBox'
-import { generateRoughLine, generateRoughCurvedLine, generateRoughArrow, generateRoughCurvedArrow } from '../rendering/roughPath'
+import { getWorldBounds, boundingBoxFromLine, boundingBoxFromCurvedArrow, boundingBoxFromPolygon } from '../utils/boundingBox'
+import { generateRoughLine, generateRoughCurvedLine, generateRoughArrow, generateRoughCurvedArrow, generateRoughPolygon } from '../rendering/roughPath'
 import { DEFAULT_FONT_FAMILY } from '../fonts/fontRegistry'
 import { measureTextBounds } from '../utils/measureText'
 
@@ -209,6 +209,10 @@ interface LumiDrawState {
   // View options
   showGrid: boolean
 
+  // Polygon drawing
+  activePolygonPoints: Point[] | null
+  selectedPolygonVertex: number | null
+
   // Marquee selection
   marqueeRect: BoundingBox | null
 
@@ -261,6 +265,9 @@ interface LumiDrawState {
   updateArrowHeadSize: (ids: Set<string>, size: number) => void
   groupObjects: (ids: Set<string>) => void
   ungroupObjects: (ids: Set<string>) => void
+  setActivePolygonPoints: (points: Point[] | null) => void
+  setSelectedPolygonVertex: (index: number | null) => void
+  updatePolygonGeometry: (id: string, points: Point[]) => void
 }
 
 export const useStore = create<LumiDrawState>((set) => ({
@@ -286,6 +293,8 @@ export const useStore = create<LumiDrawState>((set) => ({
   activeTextInput: null,
   editingTextId: null,
   showGrid: false,
+  activePolygonPoints: null,
+  selectedPolygonVertex: null,
   marqueeRect: null,
   _history: [],
   _future: [],
@@ -616,9 +625,9 @@ export const useStore = create<LumiDrawState>((set) => ({
       }
     }),
 
-  setSelectedIds: (ids) => set({ selectedIds: ids }),
+  setSelectedIds: (ids) => set({ selectedIds: ids, selectedPolygonVertex: null }),
   setMarqueeRect: (rect) => set({ marqueeRect: rect }),
-  setActiveTool: (tool) => set({ activeTool: tool, selectedIds: new Set(), activeTextInput: null, editingTextId: null }),
+  setActiveTool: (tool) => set({ activeTool: tool, selectedIds: new Set(), activeTextInput: null, editingTextId: null, activePolygonPoints: null, selectedPolygonVertex: null }),
   setStrokeColor: (color) => set((state) => {
     const styles = { strokeColor: color, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, bold: state.bold, italic: state.italic, underline: state.underline }
     persistStyles(styles)
@@ -697,8 +706,8 @@ export const useStore = create<LumiDrawState>((set) => ({
         if (styles.color !== undefined) updated.color = styles.color
         if (styles.opacity !== undefined) updated.opacity = styles.opacity
         if (styles.strokeWidth !== undefined && o.type !== 'text') updated.strokeWidth = styles.strokeWidth
-        if (styles.fillColor !== undefined && (o.type === 'rectangle' || o.type === 'ellipse')) updated.fillColor = styles.fillColor
-        if (styles.shadow !== undefined && (o.type === 'rectangle' || o.type === 'ellipse')) {
+        if (styles.fillColor !== undefined && (o.type === 'rectangle' || o.type === 'ellipse' || o.type === 'polygon')) updated.fillColor = styles.fillColor
+        if (styles.shadow !== undefined && (o.type === 'rectangle' || o.type === 'ellipse' || o.type === 'polygon')) {
           if (styles.shadow === null) {
             delete updated.shadow
           } else {
@@ -884,8 +893,30 @@ export const useStore = create<LumiDrawState>((set) => ({
     viewport: { offsetX: 0, offsetY: 0, scale: 1 },
     activeTextInput: null,
     editingTextId: null,
+    activePolygonPoints: null,
+    selectedPolygonVertex: null,
     projectName: 'Untitled',
   })),
+
+  setActivePolygonPoints: (points) => set({ activePolygonPoints: points }),
+  setSelectedPolygonVertex: (index) => set({ selectedPolygonVertex: index }),
+
+  updatePolygonGeometry: (id, points) =>
+    set((state) => ({
+      objects: state.objects.map((o) => {
+        if (o.id !== id || o.type !== 'polygon') return o
+        const bbox = boundingBoxFromPolygon(points)
+        const normalizedPoints = points.map((p) => ({ x: p.x - bbox.x, y: p.y - bbox.y }))
+        const normalizedBbox = { x: 0, y: 0, width: bbox.width, height: bbox.height }
+        return {
+          ...o,
+          points: normalizedPoints,
+          position: { x: bbox.x, y: bbox.y },
+          pathData: generateRoughPolygon(normalizedPoints),
+          boundingBox: normalizedBbox,
+        }
+      }),
+    })),
 }))
 
 // Auto-save drawing to localStorage on objects/viewport/projectName changes

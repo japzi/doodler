@@ -1,4 +1,4 @@
-import type { SceneObject, TextObject, ImageObject, RectangleShape, EllipseShape } from '../types/scene'
+import type { SceneObject, TextObject, ImageObject, RectangleShape, EllipseShape, PolygonShape } from '../types/scene'
 import { generateRoughHatchLines } from '../rendering/roughPath'
 import { DEFAULT_FONT_FAMILY, getPresetFont, isPresetFont, getFontFamilyCss } from '../fonts/fontRegistry'
 
@@ -82,7 +82,7 @@ function computeWorldBoundsRecursive(obj: SceneObject, offsetX: number, offsetY:
     }
   } else {
     const bb = obj.boundingBox
-    const shadowOffset = (obj.type === 'rectangle' || obj.type === 'ellipse') && 'shadow' in obj && obj.shadow ? obj.shadow.offset : 0
+    const shadowOffset = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'polygon') && 'shadow' in obj && obj.shadow ? obj.shadow.offset : 0
     bounds.minX = Math.min(bounds.minX, bb.x + ox)
     bounds.minY = Math.min(bounds.minY, bb.y + oy)
     bounds.maxX = Math.max(bounds.maxX, bb.x + bb.width + ox + shadowOffset)
@@ -90,15 +90,19 @@ function computeWorldBoundsRecursive(obj: SceneObject, offsetX: number, offsetY:
   }
 }
 
-function serializeShadow(obj: RectangleShape | EllipseShape, indent: string): string {
+function serializeShadow(obj: RectangleShape | EllipseShape | PolygonShape, indent: string): string {
   if (!obj.shadow) return ''
   const offset = obj.shadow.offset
   const sw = obj.strokeWidth ?? 2
   const clipId = `shadow-clip-${obj.id}`
-  const hatchPaths = generateRoughHatchLines(obj.x, obj.y, obj.width, obj.height)
+  const bb = obj.boundingBox
+  const hatchPaths = generateRoughHatchLines(bb.x, bb.y, bb.width, bb.height)
 
   let clipShape: string
-  if (obj.type === 'rectangle') {
+  if (obj.type === 'polygon') {
+    const pts = obj.points.map((p) => `${p.x},${p.y}`).join(' ')
+    clipShape = `${indent}      <polygon points="${pts}"/>`
+  } else if (obj.type === 'rectangle') {
     clipShape = `${indent}      <rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}"/>`
   } else {
     const cx = obj.x + obj.width / 2
@@ -137,15 +141,18 @@ function serializeObject(obj: SceneObject, indent: string): string {
   if (isShape) {
     const fillColor = 'fillColor' in obj && obj.fillColor && obj.fillColor !== 'transparent' ? obj.fillColor : 'none'
     const sw = 'strokeWidth' in obj && obj.strokeWidth ? obj.strokeWidth : 2
-    const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse') && 'shadow' in obj && obj.shadow
-    const shadowSvg = hasShadow ? serializeShadow(obj as RectangleShape | EllipseShape, indent) : ''
+    const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'polygon') && 'shadow' in obj && obj.shadow
+    const shadowSvg = hasShadow ? serializeShadow(obj as RectangleShape | EllipseShape | PolygonShape, indent) : ''
     const strokePath = `${indent}  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>`
 
-    if (fillColor !== 'none' && (obj.type === 'rectangle' || obj.type === 'ellipse')) {
+    if (fillColor !== 'none' && (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'polygon')) {
       const fillOpacityAttr = obj.opacity !== undefined && obj.opacity !== 1 ? ` opacity="${obj.opacity}"` : ''
       let fillEl = ''
       if (obj.type === 'rectangle') {
         fillEl = `${indent}  <rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
+      } else if (obj.type === 'polygon') {
+        const pts = (obj as PolygonShape).points.map((p) => `${p.x},${p.y}`).join(' ')
+        fillEl = `${indent}  <polygon points="${pts}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
       } else {
         fillEl = `${indent}  <path d="${obj.pathData}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
       }
