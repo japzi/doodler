@@ -33,6 +33,7 @@ export function TextInputOverlay() {
   const italic = editingObject?.italic ?? storeItalic
   const underline = editingObject?.underline ?? storeUnderline
 
+  const rotation = editingObject?.rotation ?? 0
   const screenX = sceneX * viewport.scale + viewport.offsetX
   const screenY = sceneY * viewport.scale + viewport.offsetY
   const scaledFontSize = fontSize * viewport.scale
@@ -148,6 +149,7 @@ export function TextInputOverlay() {
         lineHeight: '1.3',
         zIndex: 1000,
         whiteSpace: 'pre',
+        ...(rotation ? { transform: `rotate(${rotation}deg)`, transformOrigin: 'top left' } : {}),
       }}
     />
   )

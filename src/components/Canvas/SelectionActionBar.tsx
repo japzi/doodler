@@ -1,4 +1,5 @@
 import { useStore } from '../../store/useStore'
+import { getRotatedBounds } from '../../utils/rotation'
 import './SelectionActionBar.css'
 
 export function SelectionActionBar() {
@@ -17,13 +18,11 @@ export function SelectionActionBar() {
   let maxY = -Infinity
 
   for (const obj of selected) {
-    const bb = obj.boundingBox
-    const ox = obj.position.x
-    const oy = obj.position.y
-    minX = Math.min(minX, bb.x + ox)
-    minY = Math.min(minY, bb.y + oy)
-    maxX = Math.max(maxX, bb.x + bb.width + ox)
-    maxY = Math.max(maxY, bb.y + bb.height + oy)
+    const rb = getRotatedBounds(obj)
+    minX = Math.min(minX, rb.x)
+    minY = Math.min(minY, rb.y)
+    maxX = Math.max(maxX, rb.x + rb.width)
+    maxY = Math.max(maxY, rb.y + rb.height)
   }
 
   const cx = (minX + maxX) / 2

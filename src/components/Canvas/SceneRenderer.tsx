@@ -6,6 +6,19 @@ import { DEFAULT_FONT_FAMILY, getFontFamilyCss } from '../../fonts/fontRegistry'
 
 const LINE_HEIGHT_FACTOR = 1.3
 
+function buildTransform(obj: SceneObject): string {
+  const tx = obj.position.x
+  const ty = obj.position.y
+  const rotation = obj.rotation ?? 0
+  if (rotation === 0) {
+    return `translate(${tx}, ${ty})`
+  }
+  const bb = obj.boundingBox
+  const cx = bb.x + bb.width / 2
+  const cy = bb.y + bb.height / 2
+  return `translate(${tx}, ${ty}) rotate(${rotation}, ${cx}, ${cy})`
+}
+
 const TextElement = memo(function TextElement({ obj }: { obj: TextObject }) {
   const lines = obj.text.split('\n')
   const lineHeight = obj.fontSize * LINE_HEIGHT_FACTOR
@@ -19,7 +32,7 @@ const TextElement = memo(function TextElement({ obj }: { obj: TextObject }) {
       fontStyle={obj.italic ? 'italic' : 'normal'}
       textDecoration={obj.underline ? 'underline' : undefined}
       fill={obj.color}
-      transform={`translate(${obj.position.x}, ${obj.position.y})`}
+      transform={buildTransform(obj)}
       data-object-id={obj.id}
       style={{ cursor: 'default' }}
     >
@@ -94,7 +107,7 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
   if (hasFill) {
     return (
       <g
-        transform={`translate(${obj.position.x}, ${obj.position.y})`}
+        transform={buildTransform(obj)}
         data-object-id={obj.id}
         style={{ cursor: 'default' }}
       >
@@ -112,7 +125,7 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
 
   return (
     <g
-      transform={`translate(${obj.position.x}, ${obj.position.y})`}
+      transform={buildTransform(obj)}
       data-object-id={obj.id}
       style={{ cursor: 'default' }}
     >
@@ -142,7 +155,7 @@ const ImageElement = memo(function ImageElement({ obj }: { obj: ImageObject }) {
       x={0} y={0}
       width={obj.width} height={obj.height}
       opacity={obj.opacity ?? 1}
-      transform={`translate(${obj.position.x}, ${obj.position.y})`}
+      transform={buildTransform(obj)}
       data-object-id={obj.id}
       style={{ cursor: 'default' }}
     />
@@ -161,7 +174,7 @@ function ChildTextElement({ obj }: { obj: TextObject }) {
       fontStyle={obj.italic ? 'italic' : 'normal'}
       textDecoration={obj.underline ? 'underline' : undefined}
       fill={obj.color}
-      transform={`translate(${obj.position.x}, ${obj.position.y})`}
+      transform={buildTransform(obj)}
       style={{ cursor: 'default' }}
     >
       {lines.map((line, i) => (
@@ -182,7 +195,7 @@ function ChildPathElement({ obj }: { obj: Exclude<SceneObject, TextObject | Imag
 
   if (hasFill) {
     return (
-      <g transform={`translate(${obj.position.x}, ${obj.position.y})`} style={{ cursor: 'default' }}>
+      <g transform={buildTransform(obj)} style={{ cursor: 'default' }}>
         {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape | PolygonShape} />}
         <FillShape obj={obj as RectangleShape | EllipseShape | PolygonShape} />
         <path d={obj.pathData} fill="none" stroke={obj.color} strokeWidth={strokeWidth} />
@@ -191,7 +204,7 @@ function ChildPathElement({ obj }: { obj: Exclude<SceneObject, TextObject | Imag
   }
 
   return (
-    <g transform={`translate(${obj.position.x}, ${obj.position.y})`} style={{ cursor: 'default' }}>
+    <g transform={buildTransform(obj)} style={{ cursor: 'default' }}>
       {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape | PolygonShape} />}
       {needsHitTarget && <path d={obj.pathData} fill="none" stroke="transparent" strokeWidth={HIT_TARGET_WIDTH} />}
       <path
@@ -211,7 +224,7 @@ function ChildImageElement({ obj }: { obj: ImageObject }) {
       x={0} y={0}
       width={obj.width} height={obj.height}
       opacity={obj.opacity ?? 1}
-      transform={`translate(${obj.position.x}, ${obj.position.y})`}
+      transform={buildTransform(obj)}
       style={{ cursor: 'default' }}
     />
   )
@@ -220,7 +233,7 @@ function ChildImageElement({ obj }: { obj: ImageObject }) {
 function renderGroupChild(obj: SceneObject): React.ReactNode {
   if (obj.type === 'group') {
     return (
-      <g key={obj.id} transform={`translate(${obj.position.x}, ${obj.position.y})`}>
+      <g key={obj.id} transform={buildTransform(obj)}>
         {obj.children.map(renderGroupChild)}
       </g>
     )
@@ -233,7 +246,7 @@ function renderGroupChild(obj: SceneObject): React.ReactNode {
 const GroupElement = memo(function GroupElement({ obj }: { obj: GroupObject }) {
   return (
     <g
-      transform={`translate(${obj.position.x}, ${obj.position.y})`}
+      transform={buildTransform(obj)}
       data-object-id={obj.id}
       style={{ cursor: 'default' }}
     >

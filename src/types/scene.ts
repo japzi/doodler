@@ -19,6 +19,7 @@ export interface PenStroke {
   color: string
   strokeWidth?: number
   opacity?: number
+  rotation?: number
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -36,6 +37,7 @@ export interface RectangleShape {
   opacity?: number
   shadow?: { offset: number }
   pathData: string
+  rotation?: number
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -53,6 +55,7 @@ export interface EllipseShape {
   opacity?: number
   shadow?: { offset: number }
   pathData: string
+  rotation?: number
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -70,6 +73,7 @@ export interface LineShape {
   strokeWidth?: number
   opacity?: number
   pathData: string
+  rotation?: number
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -88,6 +92,7 @@ export interface ArrowShape {
   strokeWidth?: number
   opacity?: number
   pathData: string
+  rotation?: number
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -103,6 +108,7 @@ export interface TextObject {
   underline?: boolean
   color: string
   opacity?: number
+  rotation?: number
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -115,6 +121,7 @@ export interface ImageObject {
   height: number
   color: string        // unused but required for consistency (set to '#000')
   opacity?: number
+  rotation?: number
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -129,6 +136,7 @@ export interface PolygonShape {
   opacity?: number
   shadow?: { offset: number }
   pathData: string
+  rotation?: number
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -137,6 +145,7 @@ export interface GroupObject {
   type: 'group'
   id: string
   children: SceneObject[]
+  rotation?: number
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }

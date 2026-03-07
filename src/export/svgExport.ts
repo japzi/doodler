@@ -1,6 +1,7 @@
 import type { SceneObject, TextObject, ImageObject, RectangleShape, EllipseShape, PolygonShape } from '../types/scene'
 import { generateRoughHatchLines } from '../rendering/roughPath'
 import { DEFAULT_FONT_FAMILY, getPresetFont, isPresetFont, getFontFamilyCss } from '../fonts/fontRegistry'
+import { rotatePoint } from '../utils/rotation'
 
 const LINE_HEIGHT_FACTOR = 1.3
 
@@ -73,6 +74,21 @@ function escapeXml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
+function buildExportTransform(obj: SceneObject): string {
+  const tx = obj.position.x
+  const ty = obj.position.y
+  const rotation = obj.rotation ?? 0
+  let t = ''
+  if (tx !== 0 || ty !== 0) t += `translate(${tx}, ${ty})`
+  if (rotation) {
+    const bb = obj.boundingBox
+    const cx = bb.x + bb.width / 2
+    const cy = bb.y + bb.height / 2
+    t += `${t ? ' ' : ''}rotate(${rotation}, ${cx}, ${cy})`
+  }
+  return t ? ` transform="${t}"` : ''
+}
+
 function computeWorldBoundsRecursive(obj: SceneObject, offsetX: number, offsetY: number, bounds: { minX: number; minY: number; maxX: number; maxY: number }) {
   const ox = offsetX + obj.position.x
   const oy = offsetY + obj.position.y
@@ -83,10 +99,31 @@ function computeWorldBoundsRecursive(obj: SceneObject, offsetX: number, offsetY:
   } else {
     const bb = obj.boundingBox
     const shadowOffset = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'polygon') && 'shadow' in obj && obj.shadow ? obj.shadow.offset : 0
-    bounds.minX = Math.min(bounds.minX, bb.x + ox)
-    bounds.minY = Math.min(bounds.minY, bb.y + oy)
-    bounds.maxX = Math.max(bounds.maxX, bb.x + bb.width + ox + shadowOffset)
-    bounds.maxY = Math.max(bounds.maxY, bb.y + bb.height + oy + shadowOffset)
+    const rotation = obj.rotation ?? 0
+
+    if (rotation !== 0) {
+      // Rotate the 4 corners and compute AABB
+      const cx = ox + bb.x + bb.width / 2
+      const cy = oy + bb.y + bb.height / 2
+      const corners = [
+        { x: ox + bb.x, y: oy + bb.y },
+        { x: ox + bb.x + bb.width + shadowOffset, y: oy + bb.y },
+        { x: ox + bb.x + bb.width + shadowOffset, y: oy + bb.y + bb.height + shadowOffset },
+        { x: ox + bb.x, y: oy + bb.y + bb.height + shadowOffset },
+      ]
+      for (const c of corners) {
+        const r = rotatePoint(c.x, c.y, cx, cy, rotation)
+        bounds.minX = Math.min(bounds.minX, r.x)
+        bounds.minY = Math.min(bounds.minY, r.y)
+        bounds.maxX = Math.max(bounds.maxX, r.x)
+        bounds.maxY = Math.max(bounds.maxY, r.y)
+      }
+    } else {
+      bounds.minX = Math.min(bounds.minX, bb.x + ox)
+      bounds.minY = Math.min(bounds.minY, bb.y + oy)
+      bounds.maxX = Math.max(bounds.maxX, bb.x + bb.width + ox + shadowOffset)
+      bounds.maxY = Math.max(bounds.maxY, bb.y + bb.height + oy + shadowOffset)
+    }
   }
 }
 
@@ -117,9 +154,7 @@ function serializeShadow(obj: RectangleShape | EllipseShape | PolygonShape, inde
 }
 
 function serializeImageObject(obj: ImageObject, indent: string): string {
-  const tx = obj.position.x
-  const ty = obj.position.y
-  const transform = tx !== 0 || ty !== 0 ? ` transform="translate(${tx}, ${ty})"` : ''
+  const transform = buildExportTransform(obj)
   const opacityAttr = obj.opacity !== undefined && obj.opacity !== 1 ? ` opacity="${obj.opacity}"` : ''
   return `${indent}<image href="${obj.src}" x="0" y="0" width="${obj.width}" height="${obj.height}"${opacityAttr}${transform}/>`
 }
@@ -133,9 +168,7 @@ function serializeObject(obj: SceneObject, indent: string): string {
     return serializeGroupObject(obj, indent)
   }
 
-  const tx = obj.position.x
-  const ty = obj.position.y
-  const transform = tx !== 0 || ty !== 0 ? ` transform="translate(${tx}, ${ty})"` : ''
+  const transform = buildExportTransform(obj)
   const isShape = obj.type !== 'pen'
 
   if (isShape) {
@@ -169,17 +202,13 @@ function serializeObject(obj: SceneObject, indent: string): string {
 }
 
 function serializeGroupObject(obj: SceneObject & { type: 'group' }, indent: string): string {
-  const tx = obj.position.x
-  const ty = obj.position.y
-  const transform = tx !== 0 || ty !== 0 ? ` transform="translate(${tx}, ${ty})"` : ''
+  const transform = buildExportTransform(obj)
   const childrenSvg = obj.children.map((child: SceneObject) => serializeObject(child, indent + '  ')).join('\n')
   return `${indent}<g${transform}>\n${childrenSvg}\n${indent}</g>`
 }
 
 function serializeTextObject(obj: TextObject, indent: string = '  '): string {
-  const tx = obj.position.x
-  const ty = obj.position.y
-  const transform = tx !== 0 || ty !== 0 ? ` transform="translate(${tx}, ${ty})"` : ''
+  const transform = buildExportTransform(obj)
   const lines = obj.text.split('\n')
   const lineHeight = obj.fontSize * LINE_HEIGHT_FACTOR
 

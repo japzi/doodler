@@ -4,6 +4,7 @@ import { getObjectIdFromEvent } from '../utils/hitTest'
 import { boxesIntersect, getWorldBounds } from '../utils/boundingBox'
 import type { Point, SceneObject, ArrowShape, LineShape, PolygonShape, BoundingBox } from '../types/scene'
 import { snapToGrid } from '../utils/grid'
+import { snapAngle, rotatePoint, getRotatedBounds } from '../utils/rotation'
 
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se'
 type LineArrowHandleType = 'p1' | 'p2' | 'cp1' | 'cp2' | 'midpoint' | 'headSize'
@@ -48,6 +49,13 @@ export function usePointerTool() {
     snapshot: ArrowShape | LineShape
     startPoint: Point
   } | null>(null)
+
+  // Rotation state
+  const isRotating = useRef(false)
+  const rotateStartAngle = useRef(0)
+  const rotateCenter = useRef<Point>({ x: 0, y: 0 })
+  const rotateSnapshots = useRef<Map<string, number>>(new Map())
+  const rotateTargetIds = useRef<Set<string>>(new Set())
 
   const onPointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>, scenePoint: Point) => {
     if (e.button !== 0) return
@@ -105,6 +113,45 @@ export function usePointerTool() {
         return
       }
 
+      return
+    }
+
+    // Check for rotation handle
+    const rotateHandleAttr = target.closest('[data-rotate-handle]')?.getAttribute('data-rotate-handle')
+    if (rotateHandleAttr) {
+      const { objects, selectedIds } = useStore.getState()
+      const selected = objects.filter((o) => selectedIds.has(o.id))
+      if (selected.length === 0) return
+
+      useStore.getState().saveSnapshot()
+
+      // Compute center of selection bounding box
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      for (const obj of selected) {
+        const bb = obj.boundingBox
+        minX = Math.min(minX, obj.position.x + bb.x)
+        minY = Math.min(minY, obj.position.y + bb.y)
+        maxX = Math.max(maxX, obj.position.x + bb.x + bb.width)
+        maxY = Math.max(maxY, obj.position.y + bb.y + bb.height)
+      }
+      const cx = (minX + maxX) / 2
+      const cy = (minY + maxY) / 2
+      rotateCenter.current = { x: cx, y: cy }
+
+      // Compute initial angle from center to cursor
+      rotateStartAngle.current = Math.atan2(scenePoint.y - cy, scenePoint.x - cx) * 180 / Math.PI
+
+      // Store each object's current rotation
+      const snapshots = new Map<string, number>()
+      const ids = new Set<string>()
+      for (const obj of selected) {
+        snapshots.set(obj.id, obj.rotation ?? 0)
+        ids.add(obj.id)
+      }
+      rotateSnapshots.current = snapshots
+      rotateTargetIds.current = ids
+      isRotating.current = true
+      ;(e.target as SVGElement).setPointerCapture(e.pointerId)
       return
     }
 
@@ -238,6 +285,22 @@ export function usePointerTool() {
       return
     }
 
+    // Rotation
+    if (isRotating.current) {
+      const cx = rotateCenter.current.x
+      const cy = rotateCenter.current.y
+      const currentAngle = Math.atan2(scenePoint.y - cy, scenePoint.x - cx) * 180 / Math.PI
+      const delta = currentAngle - rotateStartAngle.current
+
+      const angleMap = new Map<string, number>()
+      for (const [id, origRotation] of rotateSnapshots.current) {
+        const newRotation = origRotation + delta
+        angleMap.set(id, snapAngle(newRotation))
+      }
+      useStore.getState().rotateObjects(angleMap)
+      return
+    }
+
     // Polygon handle drag
     if (polygonHandleDrag.current) {
       const { objId, vertexIndex, snapshot, startPoint } = polygonHandleDrag.current
@@ -313,10 +376,24 @@ export function usePointerTool() {
     if (isResizing.current && resizeAnchor.current && resizeOriginalCorner.current && resizeSnapshots.current) {
       const anchor = resizeAnchor.current
       const origCorner = resizeOriginalCorner.current
+
+      // For single rotated objects, un-rotate cursor around object center
+      let adjustedScene = scenePoint
+      if (resizeSnapshots.current.size === 1) {
+        const snap = [...resizeSnapshots.current.values()][0]
+        const rotation = snap.rotation ?? 0
+        if (rotation !== 0) {
+          const bb = snap.boundingBox
+          const ocx = snap.position.x + bb.x + bb.width / 2
+          const ocy = snap.position.y + bb.y + bb.height / 2
+          adjustedScene = rotatePoint(scenePoint.x, scenePoint.y, ocx, ocy, -rotation)
+        }
+      }
+
       const origDx = origCorner.x - anchor.x
       const origDy = origCorner.y - anchor.y
-      const curDx = scenePoint.x - anchor.x
-      const curDy = scenePoint.y - anchor.y
+      const curDx = adjustedScene.x - anchor.x
+      const curDy = adjustedScene.y - anchor.y
 
       let sx = origDx !== 0 ? curDx / origDx : 1
       let sy = origDy !== 0 ? curDy / origDy : 1
@@ -369,6 +446,14 @@ export function usePointerTool() {
       return
     }
 
+    // Rotation cleanup
+    if (isRotating.current) {
+      isRotating.current = false
+      rotateSnapshots.current = new Map()
+      rotateTargetIds.current = new Set()
+      return
+    }
+
     // Polygon handle drag cleanup
     if (polygonHandleDrag.current) {
       polygonHandleDrag.current = null
@@ -398,7 +483,7 @@ export function usePointerTool() {
         const { objects, selectedIds } = useStore.getState()
         const hitIds: string[] = []
         for (const obj of objects) {
-          const wb = getWorldBounds(obj)
+          const wb = obj.rotation ? getRotatedBounds(obj) : getWorldBounds(obj)
           if (boxesIntersect(marqueeRect, wb)) {
             hitIds.push(obj.id)
           }

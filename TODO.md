@@ -172,6 +172,21 @@
 - [x] Toolbar button (pentagon icon) with fill/shadow/opacity controls
 - [x] Unit tests (80 total, 7 new polygon tests)
 
+## v0.9.7 — Object Rotation `done`
+
+- [x] `rotation?: number` (degrees) on all 9 object types
+- [x] Rotation handle with curved-arrow icon on selected objects (above bounding box)
+- [x] Drag rotation handle to rotate — smooth rotation with 45° angle snapping (5° threshold)
+- [x] Rotation works on all object types: shapes, pen strokes, text, images, groups, polygons, lines, arrows
+- [x] Rotated overlay — selection handles visually match object rotation for single selection
+- [x] Resize works correctly on rotated objects (cursor un-rotated before scale computation)
+- [x] SVG/PNG export includes rotation transforms and correct viewBox bounds
+- [x] Copy/paste/duplicate preserves rotation (via `structuredClone`)
+- [x] Ungroup composes parent group rotation onto children
+- [x] Marquee selection uses rotated bounds for accurate hit detection
+- [x] Rotated text editing — textarea CSS rotation matches canvas angle
+- [x] Selection action bar positions correctly below rotated objects
+
 ## v1.0 — Launch
 
 - [ ] Performance tuning (500+ objects smooth)

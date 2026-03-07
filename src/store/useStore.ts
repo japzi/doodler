@@ -264,6 +264,7 @@ interface LumiDrawState {
   updateArrowGeometry: (id: string, updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }>) => void
   updateArrowHeadSize: (ids: Set<string>, size: number) => void
   groupObjects: (ids: Set<string>) => void
+  rotateObjects: (angleMap: Map<string, number>) => void
   ungroupObjects: (ids: Set<string>) => void
   setActivePolygonPoints: (points: Point[] | null) => void
   setSelectedPolygonVertex: (index: number | null) => void
@@ -852,6 +853,16 @@ export const useStore = create<LumiDrawState>((set) => ({
       }
     }),
 
+  rotateObjects: (angleMap) =>
+    set((state) => ({
+      objects: state.objects.map((o) => {
+        if (angleMap.has(o.id)) {
+          return { ...o, rotation: angleMap.get(o.id)! }
+        }
+        return o
+      }),
+    })),
+
   ungroupObjects: (ids) =>
     set((state) => {
       const groups = state.objects.filter((o) => ids.has(o.id) && o.type === 'group') as GroupObject[]
@@ -864,10 +875,12 @@ export const useStore = create<LumiDrawState>((set) => ({
       for (const obj of state.objects) {
         if (groupIds.has(obj.id) && obj.type === 'group') {
           // Replace group with its children, adjusting positions back to world coords
+          const groupRotation = obj.rotation ?? 0
           for (const child of obj.children) {
             const restored: SceneObject = {
               ...child,
               position: { x: child.position.x + obj.position.x, y: child.position.y + obj.position.y },
+              rotation: groupRotation !== 0 ? ((child.rotation ?? 0) + groupRotation) : child.rotation,
             }
             newObjects.push(restored)
             ungroupedChildIds.push(child.id)
