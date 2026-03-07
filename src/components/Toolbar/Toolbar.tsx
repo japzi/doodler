@@ -87,7 +87,10 @@ export function Toolbar() {
   }, [clearDrawing])
 
   const handleSave = useCallback(async () => {
-    await exportProject()
+    const currentName = useStore.getState().projectName
+    const name = window.prompt('Project name:', currentName)
+    if (name === null) return
+    await exportProject(name || currentName)
   }, [])
 
   const handleLoad = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -558,7 +561,7 @@ export function Toolbar() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".json,.zip"
+          accept=".lumi,application/zip,application/x-zip-compressed"
           style={{ display: 'none' }}
           onChange={handleLoad}
         />

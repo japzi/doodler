@@ -11,7 +11,7 @@ import { measureTextBounds } from '../utils/measureText'
 const STYLES_KEY = 'lumidraw-styles'
 const DRAWING_KEY = 'lumidraw-drawing'
 
-function loadDrawing(): { objects: SceneObject[]; viewport: ViewportTransform } | null {
+function loadDrawing(): { objects: SceneObject[]; viewport: ViewportTransform; projectName?: string } | null {
   try {
     const raw = localStorage.getItem(DRAWING_KEY)
     if (raw) {
@@ -22,9 +22,9 @@ function loadDrawing(): { objects: SceneObject[]; viewport: ViewportTransform } 
   return null
 }
 
-function persistDrawing(objects: SceneObject[], viewport: ViewportTransform) {
+function persistDrawing(objects: SceneObject[], viewport: ViewportTransform, projectName: string) {
   try {
-    localStorage.setItem(DRAWING_KEY, JSON.stringify({ objects, viewport }))
+    localStorage.setItem(DRAWING_KEY, JSON.stringify({ objects, viewport, projectName }))
   } catch { /* ignore */ }
 }
 
@@ -71,22 +71,18 @@ function restoreImageSrcs(objs: SceneObject[], mapping: Map<string, string>): Sc
   })
 }
 
-export async function exportProject() {
-  const { objects, viewport } = useStore.getState()
-  const images = collectImages(objects)
+export async function exportProject(name?: string) {
+  const state = useStore.getState()
+  const { objects, viewport } = state
+  const cleanName = name ? name.replace(/\.lumi$/i, '') : undefined
+  const projectName = cleanName ?? state.projectName
 
-  if (images.length === 0) {
-    const blob = new Blob([JSON.stringify({ version: 1, objects, viewport }, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'lumidraw-drawing.json'
-    a.click()
-    URL.revokeObjectURL(url)
-    return
+  if (cleanName) {
+    useStore.setState({ projectName: cleanName })
   }
 
   const zip = new JSZip()
+  const images = collectImages(objects)
   const srcMapping = new Map<string, string>()
 
   for (const img of images) {
@@ -96,65 +92,53 @@ export async function exportProject() {
     srcMapping.set(img.id, filename)
   }
 
-  const strippedObjects = replaceImageSrcs(objects, srcMapping)
-  zip.file('project.json', JSON.stringify({ version: 1, objects: strippedObjects, viewport }, null, 2))
+  const exportObjects = images.length > 0 ? replaceImageSrcs(objects, srcMapping) : objects
+  zip.file('project.json', JSON.stringify({ version: 1, projectName, objects: exportObjects, viewport }, null, 2))
 
   const content = await zip.generateAsync({ type: 'blob' })
   const url = URL.createObjectURL(content)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'lumidraw-drawing.zip'
+  a.download = `${projectName}.lumi`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
 
+function filenameWithoutExtension(name: string): string {
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(0, dot) : name
+}
+
 export async function importProject(file: File): Promise<void> {
-  const isZip = file.name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed'
-  if (isZip) {
-    const buf = await file.arrayBuffer()
-    const zip = await JSZip.loadAsync(buf)
-    const projectFile = zip.file('project.json')
-    if (!projectFile) throw new Error('Invalid ZIP: no project.json')
-    const jsonStr = await projectFile.async('string')
-    const data = JSON.parse(jsonStr)
-    if (!data.version || !Array.isArray(data.objects)) throw new Error('Invalid file format')
+  const buf = await file.arrayBuffer()
+  const zip = await JSZip.loadAsync(buf)
+  const projectFile = zip.file('project.json')
+  if (!projectFile) throw new Error('Invalid .lumi file: no project.json')
+  const jsonStr = await projectFile.async('string')
+  const data = JSON.parse(jsonStr)
+  if (!data.version || !Array.isArray(data.objects)) throw new Error('Invalid file format')
 
-    // Restore image src fields from ZIP image files
-    const srcMapping = new Map<string, string>()
-    const imageFiles = Object.keys(zip.files).filter((f) => f.startsWith('images/') && !zip.files[f].dir)
-    for (const path of imageFiles) {
-      const imgData = await zip.file(path)!.async('uint8array')
-      const ext = path.split('.').pop() ?? 'png'
-      const mimeExt = ext === 'jpg' ? 'jpeg' : ext
-      let binary = ''
-      for (let i = 0; i < imgData.length; i++) binary += String.fromCharCode(imgData[i])
-      const base64 = btoa(binary)
-      const dataUrl = `data:image/${mimeExt};base64,${base64}`
-      srcMapping.set(path, dataUrl)
-    }
-
-    const objects = restoreImageSrcs(data.objects, srcMapping)
-    useStore.setState({
-      objects,
-      viewport: data.viewport ?? { offsetX: 0, offsetY: 0, scale: 1 },
-      selectedIds: new Set(),
-      activeTextInput: null,
-      editingTextId: null,
-    })
-    return
+  // Restore image src fields from ZIP image files
+  const srcMapping = new Map<string, string>()
+  const imageFiles = Object.keys(zip.files).filter((f) => f.startsWith('images/') && !zip.files[f].dir)
+  for (const path of imageFiles) {
+    const imgData = await zip.file(path)!.async('uint8array')
+    const ext = path.split('.').pop() ?? 'png'
+    const mimeExt = ext === 'jpg' ? 'jpeg' : ext
+    let binary = ''
+    for (let i = 0; i < imgData.length; i++) binary += String.fromCharCode(imgData[i])
+    const base64 = btoa(binary)
+    const dataUrl = `data:image/${mimeExt};base64,${base64}`
+    srcMapping.set(path, dataUrl)
   }
 
-  // Legacy .json import
-  const text = await file.text()
-  const data = JSON.parse(text)
-  if (!data.version || !Array.isArray(data.objects)) {
-    throw new Error('Invalid file format')
-  }
+  const objects = restoreImageSrcs(data.objects, srcMapping)
   useStore.setState({
-    objects: data.objects,
+    objects,
     viewport: data.viewport ?? { offsetX: 0, offsetY: 0, scale: 1 },
+    projectName: data.projectName ?? filenameWithoutExtension(file.name),
     selectedIds: new Set(),
     activeTextInput: null,
     editingTextId: null,
@@ -181,6 +165,9 @@ const savedDrawing = loadDrawing()
 const MAX_HISTORY = 50
 
 interface LumiDrawState {
+  // Project
+  projectName: string
+
   // Scene
   objects: SceneObject[]
   selectedIds: Set<string>
@@ -265,6 +252,7 @@ interface LumiDrawState {
   setUnderline: (underline: boolean) => void
   setShadowEnabled: (enabled: boolean) => void
   setShadowOffset: (offset: number) => void
+  setProjectName: (name: string) => void
   toggleGrid: () => void
   clearDrawing: () => void
   updateObjectStyles: (ids: Set<string>, styles: { color?: string; fillColor?: string; strokeWidth?: number; opacity?: number; shadow?: { offset: number } | null; fontFamily?: string; fontSize?: number; bold?: boolean; italic?: boolean; underline?: boolean }) => void
@@ -276,6 +264,7 @@ interface LumiDrawState {
 }
 
 export const useStore = create<LumiDrawState>((set) => ({
+  projectName: savedDrawing?.projectName ?? 'Untitled',
   objects: savedDrawing?.objects ?? [],
   selectedIds: new Set(),
   activeTool: 'pen',
@@ -695,6 +684,7 @@ export const useStore = create<LumiDrawState>((set) => ({
   setActiveShapePreview: (preview) => set({ activeShapePreview: preview }),
   setActiveTextInput: (input) => set({ activeTextInput: input }),
   setEditingTextId: (id) => set({ editingTextId: id }),
+  setProjectName: (name) => set({ projectName: name }),
   toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
   updateObjectStyles: (ids, styles) =>
     set((state) => {
@@ -894,14 +884,15 @@ export const useStore = create<LumiDrawState>((set) => ({
     viewport: { offsetX: 0, offsetY: 0, scale: 1 },
     activeTextInput: null,
     editingTextId: null,
+    projectName: 'Untitled',
   })),
 }))
 
-// Auto-save drawing to localStorage on objects/viewport changes
+// Auto-save drawing to localStorage on objects/viewport/projectName changes
 useStore.subscribe(
   (state, prev) => {
-    if (state.objects !== prev.objects || state.viewport !== prev.viewport) {
-      persistDrawing(state.objects, state.viewport)
+    if (state.objects !== prev.objects || state.viewport !== prev.viewport || state.projectName !== prev.projectName) {
+      persistDrawing(state.objects, state.viewport, state.projectName)
     }
   },
 )

@@ -63,6 +63,7 @@ function resetStore() {
   useStore.setState({
     objects: [],
     selectedIds: new Set(),
+    projectName: 'Untitled',
     _history: [],
     _future: [],
     _clipboard: [],
@@ -409,12 +410,19 @@ describe('useStore', () => {
       }
     }
 
-    it('round-trips a JSON project without images', async () => {
+    it('round-trips a .lumi project without images', async () => {
       const rect = makeRect('r1', 10, 20)
       useStore.getState().addObject(rect)
 
-      const data = JSON.stringify({ version: 1, objects: useStore.getState().objects, viewport: useStore.getState().viewport })
-      const file = new File([data], 'test.json', { type: 'application/json' })
+      const zip = new JSZip()
+      zip.file('project.json', JSON.stringify({
+        version: 1,
+        projectName: 'No Images',
+        objects: useStore.getState().objects,
+        viewport: useStore.getState().viewport,
+      }))
+      const buf = await zip.generateAsync({ type: 'arraybuffer' })
+      const file = new File([buf], 'test.lumi')
 
       resetStore()
       await importProject(file)
@@ -423,13 +431,13 @@ describe('useStore', () => {
       expect(state.objects).toHaveLength(1)
       expect(state.objects[0].type).toBe('rectangle')
       expect(state.objects[0].position).toEqual({ x: 10, y: 20 })
+      expect(state.projectName).toBe('No Images')
     })
 
-    it('round-trips a ZIP project with images', async () => {
+    it('round-trips a .lumi project with images', async () => {
       const img = makeImage('img1', 50, 60)
       const rect = makeRect('r1', 10, 20)
 
-      // Build a ZIP like exportProject would
       const zip = new JSZip()
       const imgMatch = img.src.match(/^data:image\/(\w+);base64,(.+)$/)!
       const ext = imgMatch[1]
@@ -441,40 +449,82 @@ describe('useStore', () => {
       const strippedImg = { ...img, src: `images/${img.id}.${ext}` }
       zip.file('project.json', JSON.stringify({
         version: 1,
+        projectName: 'Test Project',
         objects: [strippedImg, rect],
         viewport: { offsetX: 0, offsetY: 0, scale: 1 },
       }))
 
       const buf = await zip.generateAsync({ type: 'arraybuffer' })
-      const file = new File([buf], 'test.zip', { type: 'application/zip' })
+      const file = new File([buf], 'test.lumi')
 
       resetStore()
       await importProject(file)
 
       const state = useStore.getState()
       expect(state.objects).toHaveLength(2)
+      expect(state.projectName).toBe('Test Project')
 
       const loadedImg = state.objects[0]
       expect(loadedImg.type).toBe('image')
       if (loadedImg.type !== 'image') return
-      // src should be restored to a base64 data URL, not the relative path
       expect(loadedImg.src).toMatch(/^data:image\/png;base64,/)
       expect(loadedImg.position).toEqual({ x: 50, y: 60 })
 
       expect(state.objects[1].type).toBe('rectangle')
     })
 
-    it('rejects invalid JSON files', async () => {
-      const file = new File(['not json'], 'bad.json', { type: 'application/json' })
-      await expect(importProject(file)).rejects.toThrow()
-    })
-
-    it('rejects ZIP without project.json', async () => {
+    it('rejects .lumi without project.json', async () => {
       const zip = new JSZip()
       zip.file('readme.txt', 'hello')
       const buf = await zip.generateAsync({ type: 'arraybuffer' })
-      const file = new File([buf], 'bad.zip', { type: 'application/zip' })
+      const file = new File([buf], 'bad.lumi')
       await expect(importProject(file)).rejects.toThrow('no project.json')
+    })
+  })
+
+  describe('projectName', () => {
+    it('defaults to Untitled', () => {
+      expect(useStore.getState().projectName).toBe('Untitled')
+    })
+
+    it('setProjectName updates state', () => {
+      useStore.getState().setProjectName('My Drawing')
+      expect(useStore.getState().projectName).toBe('My Drawing')
+    })
+
+    it('clearDrawing resets project name to Untitled', () => {
+      useStore.getState().setProjectName('My Drawing')
+      useStore.getState().clearDrawing()
+      expect(useStore.getState().projectName).toBe('Untitled')
+    })
+
+    it('import restores projectName from data', async () => {
+      const zip = new JSZip()
+      zip.file('project.json', JSON.stringify({
+        version: 1,
+        projectName: 'Saved Project',
+        objects: [makeRect('r1')],
+        viewport: { offsetX: 0, offsetY: 0, scale: 1 },
+      }))
+      const buf = await zip.generateAsync({ type: 'arraybuffer' })
+      const file = new File([buf], 'test.lumi', { type: 'application/octet-stream' })
+
+      await importProject(file)
+      expect(useStore.getState().projectName).toBe('Saved Project')
+    })
+
+    it('import falls back to filename when projectName missing', async () => {
+      const zip = new JSZip()
+      zip.file('project.json', JSON.stringify({
+        version: 1,
+        objects: [makeRect('r1')],
+        viewport: { offsetX: 0, offsetY: 0, scale: 1 },
+      }))
+      const buf = await zip.generateAsync({ type: 'arraybuffer' })
+      const file = new File([buf], 'my-sketch.lumi')
+
+      await importProject(file)
+      expect(useStore.getState().projectName).toBe('my-sketch')
     })
   })
 

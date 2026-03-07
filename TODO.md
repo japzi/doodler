@@ -142,9 +142,19 @@
 - [x] PNG export includes images (via SVG pipeline)
 - [x] Save as ZIP when images present (images/ folder + project.json)
 - [x] Load ZIP files (restores base64 data URLs from image files)
-- [x] Backward-compatible: still loads legacy .json files
 - [x] localStorage auto-save works with images (base64 inline)
 - [x] Unit tests for image resize, store operations, and SVG export (19 new tests, 66 total)
+
+## v0.9.5 — Project Name + .lumi Extension `done`
+
+- [x] Project name state (`projectName`) with `'Untitled'` default
+- [x] Prompt for project name on save (pre-filled, cancel aborts)
+- [x] Custom `.lumi` file extension (ZIP internally, file picker uses ZIP MIME types for browser compatibility)
+- [x] Project name displayed at bottom-left of canvas (clickable to rename)
+- [x] Project name persisted in localStorage and in exported `.lumi` files
+- [x] Import restores project name (falls back to filename without extension)
+- [x] "New Drawing" resets project name to `'Untitled'`
+- [x] Unit tests for project name (4 new tests, 74 total)
 
 ## v1.0 — Launch
 

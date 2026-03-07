@@ -2,6 +2,7 @@ import './App.css'
 import { Canvas } from './components/Canvas/Canvas'
 import { Toolbar } from './components/Toolbar/Toolbar'
 import { ZoomControls } from './components/ZoomControls/ZoomControls'
+import { ProjectNameLabel } from './components/Canvas/ProjectNameLabel'
 import { LoginPage } from './components/LoginPage/LoginPage'
 import { useAuthStore } from './store/useAuthStore'
 
@@ -26,6 +27,7 @@ function App() {
       <Canvas />
       <Toolbar />
       <ZoomControls />
+      <ProjectNameLabel />
     </div>
   )
 }
