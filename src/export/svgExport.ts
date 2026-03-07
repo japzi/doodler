@@ -127,13 +127,31 @@ function computeWorldBoundsRecursive(obj: SceneObject, offsetX: number, offsetY:
   }
 }
 
+function computeShadowOffset(offset: number, shadowAngle: number, objectRotation: number) {
+  const localAngle = (shadowAngle - objectRotation) * Math.PI / 180
+  return {
+    dx: offset * Math.cos(localAngle),
+    dy: offset * Math.sin(localAngle),
+  }
+}
+
 function serializeShadow(obj: RectangleShape | EllipseShape | PolygonShape, indent: string): string {
   if (!obj.shadow) return ''
   const offset = obj.shadow.offset
+  const shadowAngle = obj.shadow.angle ?? 135
+  const rotation = obj.rotation ?? 0
+  const { dx, dy } = computeShadowOffset(offset, shadowAngle, rotation)
   const sw = obj.strokeWidth ?? 2
   const clipId = `shadow-clip-${obj.id}`
   const bb = obj.boundingBox
-  const hatchPaths = generateRoughHatchLines(bb.x, bb.y, bb.width, bb.height)
+
+  // Generate hatch lines for an expanded area so they still cover the shape after counter-rotation
+  const diag = Math.sqrt(bb.width * bb.width + bb.height * bb.height)
+  const cx = bb.x + bb.width / 2
+  const cy = bb.y + bb.height / 2
+  const hatchPaths = rotation !== 0
+    ? generateRoughHatchLines(cx - diag / 2, cy - diag / 2, diag, diag)
+    : generateRoughHatchLines(bb.x, bb.y, bb.width, bb.height)
 
   let clipShape: string
   if (obj.type === 'polygon') {
@@ -142,15 +160,19 @@ function serializeShadow(obj: RectangleShape | EllipseShape | PolygonShape, inde
   } else if (obj.type === 'rectangle') {
     clipShape = `${indent}      <rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}"/>`
   } else {
-    const cx = obj.x + obj.width / 2
-    const cy = obj.y + obj.height / 2
     clipShape = `${indent}      <ellipse cx="${cx}" cy="${cy}" rx="${obj.width / 2}" ry="${obj.height / 2}"/>`
   }
 
-  const hatchLines = hatchPaths.map((d) => `${indent}      <path d="${d}" fill="none" stroke="${obj.color}" stroke-width="1.5"/>`).join('\n')
+  const hatchLines = hatchPaths.map((d) => `${indent}        <path d="${d}" fill="none" stroke="${obj.color}" stroke-width="1.5"/>`).join('\n')
   const outlinePath = `${indent}    <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>`
 
-  return `${indent}  <g transform="translate(${offset}, ${offset})">\n${indent}    <defs>\n${indent}      <clipPath id="${clipId}">\n${clipShape}\n${indent}      </clipPath>\n${indent}    </defs>\n${indent}    <g clip-path="url(#${clipId})">\n${hatchLines}\n${indent}    </g>\n${outlinePath}\n${indent}  </g>`
+  // Counter-rotate hatch lines to maintain world-space direction
+  const hatchGroupOpen = rotation !== 0
+    ? `${indent}      <g transform="rotate(${-rotation}, ${cx}, ${cy})">`
+    : `${indent}      <g>`
+  const hatchGroupClose = `${indent}      </g>`
+
+  return `${indent}  <g transform="translate(${dx}, ${dy})">\n${indent}    <defs>\n${indent}      <clipPath id="${clipId}">\n${clipShape}\n${indent}      </clipPath>\n${indent}    </defs>\n${indent}    <g clip-path="url(#${clipId})">\n${hatchGroupOpen}\n${hatchLines}\n${hatchGroupClose}\n${indent}    </g>\n${outlinePath}\n${indent}  </g>`
 }
 
 function serializeImageObject(obj: ImageObject, indent: string): string {

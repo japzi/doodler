@@ -35,7 +35,7 @@ export interface RectangleShape {
   fillColor?: string
   strokeWidth?: number
   opacity?: number
-  shadow?: { offset: number }
+  shadow?: { offset: number; angle?: number }
   pathData: string
   rotation?: number
   position: { x: number; y: number }
@@ -53,7 +53,7 @@ export interface EllipseShape {
   fillColor?: string
   strokeWidth?: number
   opacity?: number
-  shadow?: { offset: number }
+  shadow?: { offset: number; angle?: number }
   pathData: string
   rotation?: number
   position: { x: number; y: number }
@@ -134,7 +134,7 @@ export interface PolygonShape {
   fillColor?: string
   strokeWidth?: number
   opacity?: number
-  shadow?: { offset: number }
+  shadow?: { offset: number; angle?: number }
   pathData: string
   rotation?: number
   position: { x: number; y: number }

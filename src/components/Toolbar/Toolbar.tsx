@@ -34,8 +34,10 @@ export function Toolbar() {
   const setUnderline = useStore((s) => s.setUnderline)
   const shadowEnabled = useStore((s) => s.shadowEnabled)
   const shadowOffset = useStore((s) => s.shadowOffset)
+  const shadowAngle = useStore((s) => s.shadowAngle)
   const setShadowEnabled = useStore((s) => s.setShadowEnabled)
   const setShadowOffset = useStore((s) => s.setShadowOffset)
+  const setShadowAngle = useStore((s) => s.setShadowAngle)
   const clearDrawing = useStore((s) => s.clearDrawing)
   const updateObjectStyles = useStore((s) => s.updateObjectStyles)
   const selectedIds = useStore((s) => s.selectedIds)
@@ -67,7 +69,10 @@ export function Toolbar() {
     if ('fillColor' in first && first.fillColor !== undefined) setFillColor(first.fillColor)
     if (first.type === 'rectangle' || first.type === 'ellipse' || first.type === 'polygon') {
       setShadowEnabled(!!first.shadow)
-      if (first.shadow) setShadowOffset(first.shadow.offset)
+      if (first.shadow) {
+        setShadowOffset(first.shadow.offset)
+        setShadowAngle(first.shadow.angle ?? 135)
+      }
     }
     if (first.type === 'text') {
       setFontFamily(first.fontFamily ?? DEFAULT_FONT_FAMILY)
@@ -343,7 +348,7 @@ export function Toolbar() {
                 const next = !shadowEnabled
                 setShadowEnabled(next)
                 if (hasSelection) {
-                  updateObjectStyles(selectedIds, { shadow: next ? { offset: shadowOffset } : null })
+                  updateObjectStyles(selectedIds, { shadow: next ? { offset: shadowOffset, angle: shadowAngle } : null })
                 }
               }}
               data-tooltip="Drop shadow"
@@ -354,24 +359,45 @@ export function Toolbar() {
               </svg>
             </button>
             {shadowEnabled && (
-              <div className="toolbar__opacity-control">
-                <input
-                  className="toolbar__opacity-slider"
-                  type="range"
-                  min={2}
-                  max={20}
-                  value={shadowOffset}
-                  onChange={(e) => {
-                    const o = Number(e.target.value)
-                    setShadowOffset(o)
-                    if (hasSelection) {
-                      updateObjectStyles(selectedIds, { shadow: { offset: o } })
-                    }
-                  }}
-                  data-tooltip="Shadow offset"
-                />
-                <span className="toolbar__opacity-label">{shadowOffset}px</span>
-              </div>
+              <>
+                <div className="toolbar__opacity-control">
+                  <input
+                    className="toolbar__opacity-slider"
+                    type="range"
+                    min={2}
+                    max={20}
+                    value={shadowOffset}
+                    onChange={(e) => {
+                      const o = Number(e.target.value)
+                      setShadowOffset(o)
+                      if (hasSelection) {
+                        updateObjectStyles(selectedIds, { shadow: { offset: o, angle: shadowAngle } })
+                      }
+                    }}
+                    data-tooltip="Shadow offset"
+                  />
+                  <span className="toolbar__opacity-label">{shadowOffset}px</span>
+                </div>
+                <div className="toolbar__opacity-control">
+                  <input
+                    className="toolbar__opacity-slider"
+                    type="range"
+                    min={0}
+                    max={360}
+                    step={1}
+                    value={shadowAngle}
+                    onChange={(e) => {
+                      const a = Number(e.target.value)
+                      setShadowAngle(a)
+                      if (hasSelection) {
+                        updateObjectStyles(selectedIds, { shadow: { offset: shadowOffset, angle: a } })
+                      }
+                    }}
+                    data-tooltip="Shadow angle"
+                  />
+                  <span className="toolbar__opacity-label">{shadowAngle}°</span>
+                </div>
+              </>
             )}
           </>
         )}

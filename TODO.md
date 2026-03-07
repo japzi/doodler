@@ -187,6 +187,17 @@
 - [x] Rotated text editing — textarea CSS rotation matches canvas angle
 - [x] Selection action bar positions correctly below rotated objects
 
+## v0.9.8 — Rotation-Independent Shadow with Configurable Angle `done`
+
+- [x] Configurable shadow angle (0°–360° slider, default 135° = bottom-right)
+- [x] Shadow direction stays fixed in world space regardless of object rotation
+- [x] Hatch fill lines maintain consistent world-space direction after rotation
+- [x] `angle?: number` added to shadow data model (backward-compatible, defaults to 135°)
+- [x] `shadowAngle` state with persistence in localStorage
+- [x] Shadow angle synced from selected object on selection change
+- [x] SVG export renders rotation-independent shadow and hatch direction
+- [x] All 80 unit tests and 22 e2e tests passing
+
 ## v1.0 — Launch
 
 - [ ] Performance tuning (500+ objects smooth)

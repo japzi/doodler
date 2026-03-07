@@ -45,13 +45,37 @@ const TextElement = memo(function TextElement({ obj }: { obj: TextObject }) {
   )
 })
 
+function computeShadowOffset(offset: number, shadowAngle: number, objectRotation: number) {
+  const localAngle = (shadowAngle - objectRotation) * Math.PI / 180
+  return {
+    dx: offset * Math.cos(localAngle),
+    dy: offset * Math.sin(localAngle),
+  }
+}
+
 function HatchShadow({ obj }: { obj: RectangleShape | EllipseShape | PolygonShape }) {
   if (!obj.shadow) return null
   const offset = obj.shadow.offset
+  const shadowAngle = obj.shadow.angle ?? 135
+  const rotation = obj.rotation ?? 0
+  const { dx, dy } = computeShadowOffset(offset, shadowAngle, rotation)
   const clipId = `shadow-clip-${obj.id}`
   const strokeWidth = obj.strokeWidth ?? 2
   const bb = obj.boundingBox
-  const hatchPaths = generateRoughHatchLines(bb.x, bb.y, bb.width, bb.height)
+
+  // Generate hatch lines for an expanded area so they still cover the shape after counter-rotation
+  const diag = Math.sqrt(bb.width * bb.width + bb.height * bb.height)
+  const cx = bb.x + bb.width / 2
+  const cy = bb.y + bb.height / 2
+  const hatchBb = rotation !== 0
+    ? { x: cx - diag / 2, y: cy - diag / 2, w: diag, h: diag }
+    : { x: bb.x, y: bb.y, w: bb.width, h: bb.height }
+  const hatchPaths = generateRoughHatchLines(hatchBb.x, hatchBb.y, hatchBb.w, hatchBb.h)
+
+  // Counter-rotate hatch lines to maintain world-space direction
+  const hatchTransform = rotation !== 0
+    ? `rotate(${-rotation}, ${cx}, ${cy})`
+    : undefined
 
   let clipShape: React.ReactNode
   if (obj.type === 'polygon') {
@@ -64,16 +88,18 @@ function HatchShadow({ obj }: { obj: RectangleShape | EllipseShape | PolygonShap
   }
 
   return (
-    <g transform={`translate(${offset}, ${offset})`}>
+    <g transform={`translate(${dx}, ${dy})`}>
       <defs>
         <clipPath id={clipId}>
           {clipShape}
         </clipPath>
       </defs>
       <g clipPath={`url(#${clipId})`}>
-        {hatchPaths.map((d, i) => (
-          <path key={i} d={d} fill="none" stroke={obj.color} strokeWidth={1.5} />
-        ))}
+        <g transform={hatchTransform}>
+          {hatchPaths.map((d, i) => (
+            <path key={i} d={d} fill="none" stroke={obj.color} strokeWidth={1.5} />
+          ))}
+        </g>
       </g>
       <path d={obj.pathData} fill="none" stroke={obj.color} strokeWidth={strokeWidth} />
     </g>
