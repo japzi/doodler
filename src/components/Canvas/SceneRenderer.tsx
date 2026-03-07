@@ -88,9 +88,10 @@ function HatchShadow({ obj }: { obj: RectangleShape | EllipseShape | PolygonShap
   }
 
   const opacity = obj.opacity ?? 1
+  const shadowOpacity = opacity * opacity * opacity
 
   return (
-    <g transform={`translate(${dx}, ${dy})`} opacity={opacity !== 1 ? opacity : undefined}>
+    <g transform={`translate(${dx}, ${dy})`} opacity={shadowOpacity !== 1 ? shadowOpacity : undefined}>
       <defs>
         <clipPath id={clipId}>
           {clipShape}

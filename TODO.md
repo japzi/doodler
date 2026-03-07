@@ -198,7 +198,13 @@
 - [x] SVG export renders rotation-independent shadow and hatch direction
 - [x] All 80 unit tests and 22 e2e tests passing
 
-## v0.9.9 — Pen Stroke Width `done`
+## v0.9.9 — Shadow Opacity `done`
+
+- [x] Shadow opacity tracks fill opacity using cubic curve (`opacity³`)
+- [x] Shadow fades faster than fill — nearly invisible by 30% fill opacity
+- [x] Applied in both canvas renderer and SVG export
+
+## v0.9.10 — Pen Stroke Width `done`
 
 - [x] Stroke width dropdown scales pen tool thickness (via `perfect-freehand` `size` parameter)
 - [x] Mapping: `size = strokeWidth × 3` (default strokeWidth=2 → size=6, matching previous behavior)

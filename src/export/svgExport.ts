@@ -173,7 +173,8 @@ function serializeShadow(obj: RectangleShape | EllipseShape | PolygonShape, inde
   const hatchGroupClose = `${indent}      </g>`
 
   const opacity = obj.opacity ?? 1
-  const opacityAttr = opacity !== 1 ? ` opacity="${opacity}"` : ''
+  const shadowOpacity = opacity * opacity * opacity
+  const opacityAttr = shadowOpacity !== 1 ? ` opacity="${shadowOpacity}"` : ''
 
   return `${indent}  <g transform="translate(${dx}, ${dy})"${opacityAttr}>\n${indent}    <defs>\n${indent}      <clipPath id="${clipId}">\n${clipShape}\n${indent}      </clipPath>\n${indent}    </defs>\n${indent}    <g clip-path="url(#${clipId})">\n${hatchGroupOpen}\n${hatchLines}\n${hatchGroupClose}\n${indent}    </g>\n${outlinePath}\n${indent}  </g>`
 }
