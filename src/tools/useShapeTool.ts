@@ -64,7 +64,7 @@ export function useShapeTool() {
     if (!isDrawing.current) return
     isDrawing.current = false
 
-    const { activeShapePreview, strokeColor, fillColor, strokeWidth, opacity, shadowEnabled, shadowOffset, addObject, setActiveShapePreview } = useStore.getState()
+    const { activeShapePreview, strokeColor, fillColor, strokeWidth, opacity, strokeOpacity, shadowEnabled, shadowOffset, addObject, setActiveShapePreview } = useStore.getState()
     if (!activeShapePreview) return
 
     const { type, x, y, width, height, x1, y1, x2, y2 } = activeShapePreview
@@ -83,7 +83,7 @@ export function useShapeTool() {
         const pathData = generateRoughRect(x, y, width, height)
         addObject({
           type: 'rectangle',
-          id, x, y, width, height, color, fillColor, strokeWidth, opacity, pathData,
+          id, x, y, width, height, color, fillColor, strokeWidth, opacity, strokeOpacity, pathData,
           ...(shadowEnabled ? { shadow: { offset: shadowOffset } } : {}),
           position: { x: 0, y: 0 },
           boundingBox: boundingBoxFromRect(x, y, width, height),
@@ -96,7 +96,7 @@ export function useShapeTool() {
         const pathData = generateRoughEllipse(cx, cy, width, height)
         addObject({
           type: 'ellipse',
-          id, x, y, width, height, color, fillColor, strokeWidth, opacity, pathData,
+          id, x, y, width, height, color, fillColor, strokeWidth, opacity, strokeOpacity, pathData,
           ...(shadowEnabled ? { shadow: { offset: shadowOffset } } : {}),
           position: { x: 0, y: 0 },
           boundingBox: boundingBoxFromRect(x, y, width, height),
@@ -107,7 +107,7 @@ export function useShapeTool() {
         const pathData = generateRoughCloud(x, y, width, height)
         addObject({
           type: 'cloud',
-          id, x, y, width, height, color, fillColor, strokeWidth, opacity, pathData,
+          id, x, y, width, height, color, fillColor, strokeWidth, opacity, strokeOpacity, pathData,
           ...(shadowEnabled ? { shadow: { offset: shadowOffset } } : {}),
           position: { x: 0, y: 0 },
           boundingBox: boundingBoxFromRect(x, y, width, height),
@@ -118,7 +118,7 @@ export function useShapeTool() {
         const pathData = generateRoughLine(x1, y1, x2, y2)
         addObject({
           type: 'line',
-          id, x1, y1, x2, y2, color, strokeWidth, opacity, pathData,
+          id, x1, y1, x2, y2, color, strokeWidth, opacity, strokeOpacity, pathData,
           position: { x: 0, y: 0 },
           boundingBox: boundingBoxFromLine(x1, y1, x2, y2),
         })
@@ -129,7 +129,7 @@ export function useShapeTool() {
         const pathData = generateRoughArrow(x1, y1, x2, y2, arrowHeadSize)
         addObject({
           type: 'arrow',
-          id, x1, y1, x2, y2, arrowHeadSize, color, strokeWidth, opacity, pathData,
+          id, x1, y1, x2, y2, arrowHeadSize, color, strokeWidth, opacity, strokeOpacity, pathData,
           position: { x: 0, y: 0 },
           boundingBox: boundingBoxFromLine(x1, y1, x2, y2),
         })

@@ -167,7 +167,9 @@ function serializeShadow(obj: RectangleShape | EllipseShape | CloudShape | Polyg
   }
 
   const hatchLines = hatchPaths.map((d) => `${indent}        <path d="${d}" fill="none" stroke="${obj.color}" stroke-width="1.5"/>`).join('\n')
-  const outlinePath = `${indent}    <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>`
+  const strokeOpacity = obj.strokeOpacity ?? 1
+  const outlineOpacityAttr = strokeOpacity !== 1 ? ` opacity="${strokeOpacity}"` : ''
+  const outlinePath = `${indent}    <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"${outlineOpacityAttr}/>`
 
   // Counter-rotate hatch lines to maintain world-space direction
   const hatchGroupOpen = rotation !== 0
@@ -177,9 +179,9 @@ function serializeShadow(obj: RectangleShape | EllipseShape | CloudShape | Polyg
 
   const opacity = obj.opacity ?? 1
   const shadowOpacity = opacity * opacity * opacity
-  const opacityAttr = shadowOpacity !== 1 ? ` opacity="${shadowOpacity}"` : ''
+  const hatchOpacityAttr = shadowOpacity !== 1 ? ` opacity="${shadowOpacity}"` : ''
 
-  return `${indent}  <g transform="translate(${dx}, ${dy})"${opacityAttr}>\n${indent}    <defs>\n${indent}      <clipPath id="${clipId}">\n${clipShape}\n${indent}      </clipPath>\n${indent}    </defs>\n${indent}    <g clip-path="url(#${clipId})">\n${hatchGroupOpen}\n${hatchLines}\n${hatchGroupClose}\n${indent}    </g>\n${outlinePath}\n${indent}  </g>`
+  return `${indent}  <g transform="translate(${dx}, ${dy})">\n${indent}    <defs>\n${indent}      <clipPath id="${clipId}">\n${clipShape}\n${indent}      </clipPath>\n${indent}    </defs>\n${indent}    <g clip-path="url(#${clipId})"${hatchOpacityAttr}>\n${hatchGroupOpen}\n${hatchLines}\n${hatchGroupClose}\n${indent}    </g>\n${outlinePath}\n${indent}  </g>`
 }
 
 function serializeImageObject(obj: ImageObject, indent: string): string {
@@ -205,7 +207,9 @@ function serializeObject(obj: SceneObject, indent: string): string {
     const sw = 'strokeWidth' in obj && obj.strokeWidth ? obj.strokeWidth : 2
     const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon') && 'shadow' in obj && obj.shadow
     const shadowSvg = hasShadow ? serializeShadow(obj as RectangleShape | EllipseShape | CloudShape | PolygonShape, indent) : ''
-    const strokePath = `${indent}  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>`
+    const strokeOpacity = 'strokeOpacity' in obj ? (obj.strokeOpacity ?? 1) : 1
+    const strokeOpacityAttr = strokeOpacity !== 1 ? ` opacity="${strokeOpacity}"` : ''
+    const strokePath = `${indent}  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"${strokeOpacityAttr}/>`
 
     if (fillColor !== 'none' && (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon')) {
       const fillOpacityAttr = obj.opacity !== undefined && obj.opacity !== 1 ? ` opacity="${obj.opacity}"` : ''
@@ -225,12 +229,14 @@ function serializeObject(obj: SceneObject, indent: string): string {
     }
 
     if (hasShadow) {
-      return `${indent}<g${transform}>\n${shadowSvg}\n${indent}  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>\n${indent}</g>`
+      return `${indent}<g${transform}>\n${shadowSvg}\n${indent}  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"${strokeOpacityAttr}/>\n${indent}</g>`
     }
 
-    return `${indent}<path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"${transform}/>`
+    return `${indent}<path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"${strokeOpacityAttr}${transform}/>`
   }
-  return `${indent}<path d="${obj.pathData}" fill="${obj.color}"${transform}/>`
+  const penStrokeOpacity = 'strokeOpacity' in obj ? (obj.strokeOpacity ?? 1) : 1
+  const penOpacityAttr = penStrokeOpacity !== 1 ? ` opacity="${penStrokeOpacity}"` : ''
+  return `${indent}<path d="${obj.pathData}" fill="${obj.color}"${penOpacityAttr}${transform}/>`
 }
 
 function serializeGroupObject(obj: SceneObject & { type: 'group' }, indent: string): string {

@@ -92,22 +92,23 @@ function HatchShadow({ obj }: { obj: RectangleShape | EllipseShape | CloudShape 
 
   const opacity = obj.opacity ?? 1
   const shadowOpacity = opacity * opacity * opacity
+  const strokeOpacity = obj.strokeOpacity ?? 1
 
   return (
-    <g transform={`translate(${dx}, ${dy})`} opacity={shadowOpacity !== 1 ? shadowOpacity : undefined}>
+    <g transform={`translate(${dx}, ${dy})`}>
       <defs>
         <clipPath id={clipId}>
           {clipShape}
         </clipPath>
       </defs>
-      <g clipPath={`url(#${clipId})`}>
+      <g clipPath={`url(#${clipId})`} opacity={shadowOpacity !== 1 ? shadowOpacity : undefined}>
         <g transform={hatchTransform}>
           {hatchPaths.map((d, i) => (
             <path key={i} d={d} fill="none" stroke={obj.color} strokeWidth={1.5} />
           ))}
         </g>
       </g>
-      <path d={obj.pathData} fill="none" stroke={obj.color} strokeWidth={strokeWidth} />
+      <path d={obj.pathData} fill="none" stroke={obj.color} strokeWidth={strokeWidth} opacity={strokeOpacity !== 1 ? strokeOpacity : undefined} />
     </g>
   )
 }
@@ -139,6 +140,7 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
   const hasFill = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon') && obj.fillColor && obj.fillColor !== 'none' && obj.fillColor !== 'transparent'
   const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon') && obj.shadow
   const needsHitTarget = strokeWidth < HIT_TARGET_WIDTH
+  const strokeOpacity = ('strokeOpacity' in obj ? obj.strokeOpacity : undefined) ?? 1
 
   if (hasFill) {
     return (
@@ -154,6 +156,7 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
           fill="none"
           stroke={obj.color}
           strokeWidth={strokeWidth}
+          opacity={strokeOpacity !== 1 ? strokeOpacity : undefined}
         />
       </g>
     )
@@ -179,6 +182,7 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
         fill={isShape ? 'none' : obj.color}
         stroke={isShape ? obj.color : undefined}
         strokeWidth={isShape ? strokeWidth : undefined}
+        opacity={strokeOpacity !== 1 ? strokeOpacity : undefined}
       />
     </g>
   )
@@ -228,13 +232,14 @@ function ChildPathElement({ obj }: { obj: Exclude<SceneObject, TextObject | Imag
   const hasFill = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon') && obj.fillColor && obj.fillColor !== 'none' && obj.fillColor !== 'transparent'
   const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon') && obj.shadow
   const needsHitTarget = strokeWidth < HIT_TARGET_WIDTH
+  const strokeOpacity = ('strokeOpacity' in obj ? obj.strokeOpacity : undefined) ?? 1
 
   if (hasFill) {
     return (
       <g transform={buildTransform(obj)} style={{ cursor: 'default' }}>
         {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape | CloudShape | PolygonShape} />}
         <FillShape obj={obj as RectangleShape | EllipseShape | CloudShape | PolygonShape} />
-        <path d={obj.pathData} fill="none" stroke={obj.color} strokeWidth={strokeWidth} />
+        <path d={obj.pathData} fill="none" stroke={obj.color} strokeWidth={strokeWidth} opacity={strokeOpacity !== 1 ? strokeOpacity : undefined} />
       </g>
     )
   }
@@ -248,6 +253,7 @@ function ChildPathElement({ obj }: { obj: Exclude<SceneObject, TextObject | Imag
         fill={isShape ? 'none' : obj.color}
         stroke={isShape ? obj.color : undefined}
         strokeWidth={isShape ? strokeWidth : undefined}
+        opacity={strokeOpacity !== 1 ? strokeOpacity : undefined}
       />
     </g>
   )

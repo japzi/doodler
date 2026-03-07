@@ -26,7 +26,7 @@ export function usePenTool() {
     if (!isDrawing.current) return
     isDrawing.current = false
 
-    const { activeStrokePoints, strokeColor, strokeWidth, opacity, addObject } = useStore.getState()
+    const { activeStrokePoints, strokeColor, strokeWidth, opacity, strokeOpacity, addObject } = useStore.getState()
     if (!activeStrokePoints || activeStrokePoints.length < 2) {
       useStore.getState().setActiveStrokePoints(null)
       return
@@ -43,6 +43,7 @@ export function usePenTool() {
       color: strokeColor,
       strokeWidth,
       opacity,
+      strokeOpacity,
       position: { x: 0, y: 0 },
       boundingBox,
     })

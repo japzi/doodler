@@ -26,7 +26,9 @@ export function Toolbar() {
   const setStrokeColor = useStore((s) => s.setStrokeColor)
   const setFillColor = useStore((s) => s.setFillColor)
   const setStrokeWidth = useStore((s) => s.setStrokeWidth)
+  const strokeOpacity = useStore((s) => s.strokeOpacity)
   const setOpacity = useStore((s) => s.setOpacity)
+  const setStrokeOpacity = useStore((s) => s.setStrokeOpacity)
   const setFontSize = useStore((s) => s.setFontSize)
   const setFontFamily = useStore((s) => s.setFontFamily)
   const setBold = useStore((s) => s.setBold)
@@ -65,6 +67,7 @@ export function Toolbar() {
     if (first.type === 'group') return
     setStrokeColor(first.color)
     setOpacity(first.opacity ?? 1)
+    if ('strokeOpacity' in first && first.strokeOpacity !== undefined) setStrokeOpacity(first.strokeOpacity)
     if ('strokeWidth' in first && first.strokeWidth !== undefined) setStrokeWidth(first.strokeWidth)
     if ('fillColor' in first && first.fillColor !== undefined) setFillColor(first.fillColor)
     if (first.type === 'rectangle' || first.type === 'ellipse' || first.type === 'cloud' || first.type === 'polygon') {
@@ -306,13 +309,6 @@ export function Toolbar() {
           if (hasSelection) updateObjectStyles(selectedIds, { color })
         }} label="Stroke" />
 
-        {(activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'cloud' || activeTool === 'polygon' || (activeTool === 'pointer' && selectedHasFill)) && (
-          <ColorPicker value={fillColor} onChange={(color) => {
-            setFillColor(color)
-            if (hasSelection) updateObjectStyles(selectedIds, { fillColor: color })
-          }} allowNone label="Fill" />
-        )}
-
         {(activeTool === 'pen' || isShapeTool || (activeTool === 'pointer' && selectedHasStrokeWidth)) && (
           <select
             className="toolbar__stroke-width-select"
@@ -328,6 +324,32 @@ export function Toolbar() {
               <option key={w} value={w}>{w}px</option>
             ))}
           </select>
+        )}
+
+        {(activeTool === 'pen' || isShapeTool || (activeTool === 'pointer' && selectedHasStrokeWidth)) && (
+          <div className="toolbar__opacity-control">
+            <input
+              className="toolbar__opacity-slider"
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(strokeOpacity * 100)}
+              onChange={(e) => {
+                const o = Number(e.target.value) / 100
+                setStrokeOpacity(o)
+                if (hasSelection) updateObjectStyles(selectedIds, { strokeOpacity: o })
+              }}
+              data-tooltip="Stroke opacity"
+            />
+            <span className="toolbar__opacity-label">{Math.round(strokeOpacity * 100)}%</span>
+          </div>
+        )}
+
+        {(activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'cloud' || activeTool === 'polygon' || (activeTool === 'pointer' && selectedHasFill)) && (
+          <ColorPicker value={fillColor} onChange={(color) => {
+            setFillColor(color)
+            if (hasSelection) updateObjectStyles(selectedIds, { fillColor: color })
+          }} allowNone label="Fill" />
         )}
 
         {(activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'cloud' || activeTool === 'polygon' || (activeTool === 'pointer' && selectedHasFill)) && (

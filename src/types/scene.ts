@@ -19,6 +19,7 @@ export interface PenStroke {
   color: string
   strokeWidth?: number
   opacity?: number
+  strokeOpacity?: number
   rotation?: number
   locked?: boolean
   position: { x: number; y: number }
@@ -36,6 +37,7 @@ export interface RectangleShape {
   fillColor?: string
   strokeWidth?: number
   opacity?: number
+  strokeOpacity?: number
   shadow?: { offset: number; angle?: number }
   pathData: string
   rotation?: number
@@ -55,6 +57,7 @@ export interface EllipseShape {
   fillColor?: string
   strokeWidth?: number
   opacity?: number
+  strokeOpacity?: number
   shadow?: { offset: number; angle?: number }
   pathData: string
   rotation?: number
@@ -75,6 +78,7 @@ export interface LineShape {
   color: string
   strokeWidth?: number
   opacity?: number
+  strokeOpacity?: number
   pathData: string
   rotation?: number
   locked?: boolean
@@ -95,6 +99,7 @@ export interface ArrowShape {
   color: string
   strokeWidth?: number
   opacity?: number
+  strokeOpacity?: number
   pathData: string
   rotation?: number
   locked?: boolean
@@ -144,6 +149,7 @@ export interface CloudShape {
   fillColor?: string
   strokeWidth?: number
   opacity?: number
+  strokeOpacity?: number
   shadow?: { offset: number; angle?: number }
   pathData: string
   rotation?: number
@@ -160,6 +166,7 @@ export interface PolygonShape {
   fillColor?: string
   strokeWidth?: number
   opacity?: number
+  strokeOpacity?: number
   shadow?: { offset: number; angle?: number }
   pathData: string
   rotation?: number

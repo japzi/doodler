@@ -226,6 +226,17 @@
 - [x] Toolbar button (cloud icon) after polygon, with fill/shadow/opacity controls
 - [x] All 92 unit tests passing
 
+## v0.9.12 — Separate Stroke Opacity `done`
+
+- [x] `strokeOpacity?: number` on all drawable object types (pen, rectangle, ellipse, cloud, line, arrow, polygon)
+- [x] Independent stroke opacity slider in toolbar (shows for pen, shape tools, and stroke-capable selections)
+- [x] Toolbar layout: stroke color → stroke width → stroke opacity → fill color → fill opacity
+- [x] Stroke opacity applied on canvas renderer (stroke paths and pen fill paths)
+- [x] Shadow hatch uses fill opacity³, shadow outline uses stroke opacity
+- [x] SVG/PNG export respects stroke opacity
+- [x] Stroke opacity persisted to localStorage and synced from selected objects
+- [x] All 92 unit tests passing
+
 ## v1.0 — Launch
 
 - [ ] Performance tuning (500+ objects smooth)

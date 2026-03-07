@@ -146,15 +146,15 @@ export async function importProject(file: File): Promise<void> {
   })
 }
 
-function loadStyles(): { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number; fontFamily: string; arrowHeadSize: number; shadowEnabled: boolean; shadowOffset: number; shadowAngle: number; bold: boolean; italic: boolean; underline: boolean } {
+function loadStyles(): { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; strokeOpacity: number; fontSize: number; fontFamily: string; arrowHeadSize: number; shadowEnabled: boolean; shadowOffset: number; shadowAngle: number; bold: boolean; italic: boolean; underline: boolean } {
   try {
     const raw = localStorage.getItem(STYLES_KEY)
-    if (raw) return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, fontSize: 24, fontFamily: DEFAULT_FONT_FAMILY, arrowHeadSize: 16, shadowEnabled: false, shadowOffset: 8, shadowAngle: 135, bold: false, italic: false, underline: false, ...JSON.parse(raw) }
+    if (raw) return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, strokeOpacity: 1, fontSize: 24, fontFamily: DEFAULT_FONT_FAMILY, arrowHeadSize: 16, shadowEnabled: false, shadowOffset: 8, shadowAngle: 135, bold: false, italic: false, underline: false, ...JSON.parse(raw) }
   } catch { /* ignore */ }
-  return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, fontSize: 24, fontFamily: DEFAULT_FONT_FAMILY, arrowHeadSize: 16, shadowEnabled: false, shadowOffset: 8, shadowAngle: 135, bold: false, italic: false, underline: false }
+  return { strokeColor: '#000000', fillColor: 'transparent', strokeWidth: 2, opacity: 1, strokeOpacity: 1, fontSize: 24, fontFamily: DEFAULT_FONT_FAMILY, arrowHeadSize: 16, shadowEnabled: false, shadowOffset: 8, shadowAngle: 135, bold: false, italic: false, underline: false }
 }
 
-function persistStyles(state: { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; fontSize: number; fontFamily: string; arrowHeadSize: number; shadowEnabled: boolean; shadowOffset: number; shadowAngle: number; bold: boolean; italic: boolean; underline: boolean }) {
+function persistStyles(state: { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; strokeOpacity: number; fontSize: number; fontFamily: string; arrowHeadSize: number; shadowEnabled: boolean; shadowOffset: number; shadowAngle: number; bold: boolean; italic: boolean; underline: boolean }) {
   try {
     localStorage.setItem(STYLES_KEY, JSON.stringify(state))
   } catch { /* ignore */ }
@@ -187,6 +187,7 @@ interface LumiDrawState {
   fillColor: string
   strokeWidth: number
   opacity: number
+  strokeOpacity: number
   fontSize: number
   fontFamily: string
   bold: boolean
@@ -245,6 +246,7 @@ interface LumiDrawState {
   setFillColor: (color: string) => void
   setStrokeWidth: (width: number) => void
   setOpacity: (opacity: number) => void
+  setStrokeOpacity: (strokeOpacity: number) => void
   setArrowHeadSize: (size: number) => void
   setFontSize: (size: number) => void
   setFontFamily: (family: string) => void
@@ -262,7 +264,7 @@ interface LumiDrawState {
   setProjectName: (name: string) => void
   toggleGrid: () => void
   clearDrawing: () => void
-  updateObjectStyles: (ids: Set<string>, styles: { color?: string; fillColor?: string; strokeWidth?: number; opacity?: number; shadow?: { offset: number; angle?: number } | null; fontFamily?: string; fontSize?: number; bold?: boolean; italic?: boolean; underline?: boolean }) => void
+  updateObjectStyles: (ids: Set<string>, styles: { color?: string; fillColor?: string; strokeWidth?: number; opacity?: number; strokeOpacity?: number; shadow?: { offset: number; angle?: number } | null; fontFamily?: string; fontSize?: number; bold?: boolean; italic?: boolean; underline?: boolean }) => void
   updateLineGeometry: (id: string, updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }>) => void
   updateArrowGeometry: (id: string, updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }>) => void
   updateArrowHeadSize: (ids: Set<string>, size: number) => void
@@ -284,6 +286,7 @@ export const useStore = create<LumiDrawState>((set) => ({
   fillColor: savedStyles.fillColor,
   strokeWidth: savedStyles.strokeWidth,
   opacity: savedStyles.opacity,
+  strokeOpacity: savedStyles.strokeOpacity,
   fontSize: savedStyles.fontSize,
   fontFamily: savedStyles.fontFamily,
   bold: savedStyles.bold,
@@ -642,67 +645,72 @@ export const useStore = create<LumiDrawState>((set) => ({
   setMarqueeRect: (rect) => set({ marqueeRect: rect }),
   setActiveTool: (tool) => set({ activeTool: tool, selectedIds: new Set(), activeTextInput: null, editingTextId: null, activePolygonPoints: null, selectedPolygonVertex: null }),
   setStrokeColor: (color) => set((state) => {
-    const styles = { strokeColor: color, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
+    const styles = { strokeColor: color, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, strokeOpacity: state.strokeOpacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
     persistStyles(styles)
     return { strokeColor: color }
   }),
   setFillColor: (color) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: color, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
+    const styles = { strokeColor: state.strokeColor, fillColor: color, strokeWidth: state.strokeWidth, opacity: state.opacity, strokeOpacity: state.strokeOpacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
     persistStyles(styles)
     return { fillColor: color }
   }),
   setStrokeWidth: (width) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: width, opacity: state.opacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: width, opacity: state.opacity, strokeOpacity: state.strokeOpacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
     persistStyles(styles)
     return { strokeWidth: width }
   }),
   setOpacity: (opacity) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity, strokeOpacity: state.strokeOpacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
     persistStyles(styles)
     return { opacity }
   }),
+  setStrokeOpacity: (strokeOpacity) => set((state) => {
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, strokeOpacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
+    persistStyles(styles)
+    return { strokeOpacity }
+  }),
   setArrowHeadSize: (size) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: size, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, strokeOpacity: state.strokeOpacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: size, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
     persistStyles(styles)
     return { arrowHeadSize: size }
   }),
   setFontSize: (size) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: size, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, strokeOpacity: state.strokeOpacity, fontSize: size, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
     persistStyles(styles)
     return { fontSize: size }
   }),
   setFontFamily: (family) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, fontFamily: family, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, strokeOpacity: state.strokeOpacity, fontSize: state.fontSize, fontFamily: family, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
     persistStyles(styles)
     return { fontFamily: family }
   }),
   setBold: (bold) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold, italic: state.italic, underline: state.underline }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, strokeOpacity: state.strokeOpacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold, italic: state.italic, underline: state.underline }
     persistStyles(styles)
     return { bold }
   }),
   setItalic: (italic) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic, underline: state.underline }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, strokeOpacity: state.strokeOpacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic, underline: state.underline }
     persistStyles(styles)
     return { italic }
   }),
   setUnderline: (underline) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, strokeOpacity: state.strokeOpacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline }
     persistStyles(styles)
     return { underline }
   }),
   setShadowEnabled: (enabled) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: enabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, strokeOpacity: state.strokeOpacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: enabled, shadowOffset: state.shadowOffset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
     persistStyles(styles)
     return { shadowEnabled: enabled }
   }),
   setShadowOffset: (offset) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: offset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, strokeOpacity: state.strokeOpacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: offset, shadowAngle: state.shadowAngle, bold: state.bold, italic: state.italic, underline: state.underline }
     persistStyles(styles)
     return { shadowOffset: offset }
   }),
   setShadowAngle: (angle) => set((state) => {
-    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: angle, bold: state.bold, italic: state.italic, underline: state.underline }
+    const styles = { strokeColor: state.strokeColor, fillColor: state.fillColor, strokeWidth: state.strokeWidth, opacity: state.opacity, strokeOpacity: state.strokeOpacity, fontSize: state.fontSize, fontFamily: state.fontFamily, arrowHeadSize: state.arrowHeadSize, shadowEnabled: state.shadowEnabled, shadowOffset: state.shadowOffset, shadowAngle: angle, bold: state.bold, italic: state.italic, underline: state.underline }
     persistStyles(styles)
     return { shadowAngle: angle }
   }),
@@ -723,6 +731,7 @@ export const useStore = create<LumiDrawState>((set) => ({
         const updated: any = { ...o }
         if (styles.color !== undefined) updated.color = styles.color
         if (styles.opacity !== undefined) updated.opacity = styles.opacity
+        if (styles.strokeOpacity !== undefined && o.type !== 'text' && o.type !== 'image') updated.strokeOpacity = styles.strokeOpacity
         if (styles.strokeWidth !== undefined && o.type !== 'text') {
           updated.strokeWidth = styles.strokeWidth
           if (o.type === 'pen') {
