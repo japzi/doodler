@@ -172,7 +172,10 @@ function serializeShadow(obj: RectangleShape | EllipseShape | PolygonShape, inde
     : `${indent}      <g>`
   const hatchGroupClose = `${indent}      </g>`
 
-  return `${indent}  <g transform="translate(${dx}, ${dy})">\n${indent}    <defs>\n${indent}      <clipPath id="${clipId}">\n${clipShape}\n${indent}      </clipPath>\n${indent}    </defs>\n${indent}    <g clip-path="url(#${clipId})">\n${hatchGroupOpen}\n${hatchLines}\n${hatchGroupClose}\n${indent}    </g>\n${outlinePath}\n${indent}  </g>`
+  const opacity = obj.opacity ?? 1
+  const opacityAttr = opacity !== 1 ? ` opacity="${opacity}"` : ''
+
+  return `${indent}  <g transform="translate(${dx}, ${dy})"${opacityAttr}>\n${indent}    <defs>\n${indent}      <clipPath id="${clipId}">\n${clipShape}\n${indent}      </clipPath>\n${indent}    </defs>\n${indent}    <g clip-path="url(#${clipId})">\n${hatchGroupOpen}\n${hatchLines}\n${hatchGroupClose}\n${indent}    </g>\n${outlinePath}\n${indent}  </g>`
 }
 
 function serializeImageObject(obj: ImageObject, indent: string): string {
