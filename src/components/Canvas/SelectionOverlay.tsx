@@ -2,6 +2,42 @@ import { useStore } from '../../store/useStore'
 import type { ArrowShape, LineShape, PolygonShape } from '../../types/scene'
 import { getRotatedBounds } from '../../utils/rotation'
 
+function LockIndicator({ x, y, scale }: { x: number; y: number; scale: number }) {
+  const s = 18 / scale
+  const sw = 1.2 / scale
+  // Lock body (bottom rectangle)
+  const bx = x + s * 0.2
+  const by = y + s * 0.44
+  const bw = s * 0.6
+  const bh = s * 0.42
+  // Shackle (arc on top)
+  const shackleLeft = x + s * 0.3
+  const shackleRight = x + s * 0.7
+  const shackleTop = y + s * 0.15
+  const shackleBottom = by
+  const shackleR = (shackleRight - shackleLeft) / 2
+  return (
+    <g pointerEvents="none">
+      <rect
+        x={x} y={y}
+        width={s} height={s}
+        rx={3 / scale}
+        fill="rgba(0,0,0,0.55)"
+      />
+      <rect
+        x={bx} y={by}
+        width={bw} height={bh}
+        rx={1 / scale}
+        fill="none" stroke="white" strokeWidth={sw}
+      />
+      <path
+        d={`M ${shackleLeft} ${shackleBottom} V ${shackleTop + shackleR} A ${shackleR} ${shackleR} 0 0 1 ${shackleRight} ${shackleTop + shackleR} V ${shackleBottom}`}
+        fill="none" stroke="white" strokeWidth={sw} strokeLinecap="round"
+      />
+    </g>
+  )
+}
+
 function RotateHandle({ cx, cy, r, scale }: { cx: number; cy: number; r: number; scale: number }) {
   // Small curved arrow icon inside the circle
   const iconR = r * 0.55
@@ -59,6 +95,7 @@ export function SelectionOverlay() {
   if (selectedIds.size > 0 && !editingTextId) {
     const selected = objects.filter((o) => selectedIds.has(o.id))
     if (selected.length > 0) {
+      const allLocked = selected.every((o) => o.locked)
       const isSingleArrow = selected.length === 1 && selected[0].type === 'arrow'
       const isSingleLine = selected.length === 1 && selected[0].type === 'line'
       const isSinglePolygon = selected.length === 1 && selected[0].type === 'polygon'
@@ -78,89 +115,109 @@ export function SelectionOverlay() {
         const stemLength = 20 / viewport.scale
         const rotHandleTopY = polyMinY - padding - stemLength
 
-        const polygonOverlay = (
-          <>
-            {/* Rotation stem line */}
-            <line
-              x1={polyCenterX} y1={polyMinY - padding}
-              x2={polyCenterX} y2={rotHandleTopY}
-              stroke="#4a90d9"
-              strokeWidth={1}
-              vectorEffect="non-scaling-stroke"
-              pointerEvents="none"
-            />
-            {/* Rotation handle */}
-            <RotateHandle cx={polyCenterX} cy={rotHandleTopY} r={handleRadius} scale={viewport.scale} />
-            {/* Vertex handles */}
-            {obj.points.map((p, i) => (
-              <circle
-                key={`v-${i}`}
-                data-polygon-handle={`vertex-${i}`}
-                cx={ox + p.x}
-                cy={oy + p.y}
-                r={handleRadius}
-                fill={selectedPolygonVertex === i ? '#4a90d9' : 'white'}
+        let polygonOverlay: React.ReactNode
+
+        if (allLocked) {
+          // Locked: show only bounding box + lock indicator
+          const bx = ox + bb.x - padding
+          const by = oy + bb.y - padding
+          const bw = bb.width + padding * 2
+          const bh = bb.height + padding * 2
+          polygonOverlay = (
+            <>
+              <rect
+                x={bx} y={by} width={bw} height={bh}
+                fill="none" stroke="#4a90d9" strokeWidth={1} strokeDasharray="5 3"
+                vectorEffect="non-scaling-stroke" pointerEvents="none"
+              />
+              <LockIndicator x={bx + 2 / viewport.scale} y={by + 2 / viewport.scale} scale={viewport.scale} />
+            </>
+          )
+        } else {
+          polygonOverlay = (
+            <>
+              {/* Rotation stem line */}
+              <line
+                x1={polyCenterX} y1={polyMinY - padding}
+                x2={polyCenterX} y2={rotHandleTopY}
                 stroke="#4a90d9"
                 strokeWidth={1}
                 vectorEffect="non-scaling-stroke"
-                style={{ cursor: 'move' }}
-                pointerEvents="auto"
+                pointerEvents="none"
               />
-            ))}
-            {/* Edge midpoint handles */}
-            {obj.points.map((p, i) => {
-              const next = obj.points[(i + 1) % obj.points.length]
-              const mx = ox + (p.x + next.x) / 2
-              const my = oy + (p.y + next.y) / 2
-              return (
+              {/* Rotation handle */}
+              <RotateHandle cx={polyCenterX} cy={rotHandleTopY} r={handleRadius} scale={viewport.scale} />
+              {/* Vertex handles */}
+              {obj.points.map((p, i) => (
                 <circle
-                  key={`m-${i}`}
-                  data-polygon-handle={`mid-${i}`}
-                  cx={mx}
-                  cy={my}
-                  r={midHandleRadius}
-                  fill="#4a90d9"
-                  stroke="white"
+                  key={`v-${i}`}
+                  data-polygon-handle={`vertex-${i}`}
+                  cx={ox + p.x}
+                  cy={oy + p.y}
+                  r={handleRadius}
+                  fill={selectedPolygonVertex === i ? '#4a90d9' : 'white'}
+                  stroke="#4a90d9"
                   strokeWidth={1}
                   vectorEffect="non-scaling-stroke"
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'move' }}
                   pointerEvents="auto"
                 />
-              )
-            })}
-            {/* Delete button for selected vertex */}
-            {selectedPolygonVertex !== null && obj.points.length > 3 && (() => {
-              const vp = obj.points[selectedPolygonVertex]
-              if (!vp) return null
-              const bx = ox + vp.x - deleteSize / 2
-              const by = oy + vp.y - deleteSize - 4 / viewport.scale
-              return (
-                <g
-                  data-polygon-handle="delete-vertex"
-                  style={{ cursor: 'pointer' }}
-                  pointerEvents="auto"
-                >
-                  <rect
-                    x={bx} y={by}
-                    width={deleteSize} height={deleteSize}
-                    rx={2 / viewport.scale}
-                    fill="#e74c3c" stroke="none"
+              ))}
+              {/* Edge midpoint handles */}
+              {obj.points.map((p, i) => {
+                const next = obj.points[(i + 1) % obj.points.length]
+                const mx = ox + (p.x + next.x) / 2
+                const my = oy + (p.y + next.y) / 2
+                return (
+                  <circle
+                    key={`m-${i}`}
+                    data-polygon-handle={`mid-${i}`}
+                    cx={mx}
+                    cy={my}
+                    r={midHandleRadius}
+                    fill="#4a90d9"
+                    stroke="white"
+                    strokeWidth={1}
+                    vectorEffect="non-scaling-stroke"
+                    style={{ cursor: 'pointer' }}
+                    pointerEvents="auto"
                   />
-                  <line
-                    x1={bx + 3 / viewport.scale} y1={by + 3 / viewport.scale}
-                    x2={bx + deleteSize - 3 / viewport.scale} y2={by + deleteSize - 3 / viewport.scale}
-                    stroke="white" strokeWidth={1.5 / viewport.scale}
-                  />
-                  <line
-                    x1={bx + deleteSize - 3 / viewport.scale} y1={by + 3 / viewport.scale}
-                    x2={bx + 3 / viewport.scale} y2={by + deleteSize - 3 / viewport.scale}
-                    stroke="white" strokeWidth={1.5 / viewport.scale}
-                  />
-                </g>
-              )
-            })()}
-          </>
-        )
+                )
+              })}
+              {/* Delete button for selected vertex */}
+              {selectedPolygonVertex !== null && obj.points.length > 3 && (() => {
+                const vp = obj.points[selectedPolygonVertex]
+                if (!vp) return null
+                const bx = ox + vp.x - deleteSize / 2
+                const by = oy + vp.y - deleteSize - 4 / viewport.scale
+                return (
+                  <g
+                    data-polygon-handle="delete-vertex"
+                    style={{ cursor: 'pointer' }}
+                    pointerEvents="auto"
+                  >
+                    <rect
+                      x={bx} y={by}
+                      width={deleteSize} height={deleteSize}
+                      rx={2 / viewport.scale}
+                      fill="#e74c3c" stroke="none"
+                    />
+                    <line
+                      x1={bx + 3 / viewport.scale} y1={by + 3 / viewport.scale}
+                      x2={bx + deleteSize - 3 / viewport.scale} y2={by + deleteSize - 3 / viewport.scale}
+                      stroke="white" strokeWidth={1.5 / viewport.scale}
+                    />
+                    <line
+                      x1={bx + deleteSize - 3 / viewport.scale} y1={by + 3 / viewport.scale}
+                      x2={bx + 3 / viewport.scale} y2={by + deleteSize - 3 / viewport.scale}
+                      stroke="white" strokeWidth={1.5 / viewport.scale}
+                    />
+                  </g>
+                )
+              })()}
+            </>
+          )
+        }
 
         if (polyRotation !== 0) {
           const rcx = ox + bb.x + bb.width / 2
@@ -177,177 +234,207 @@ export function SelectionOverlay() {
         const obj = selected[0] as ArrowShape | LineShape
         const ox = obj.position.x
         const oy = obj.position.y
-        const p1x = ox + obj.x1
-        const p1y = oy + obj.y1
-        const p2x = ox + obj.x2
-        const p2y = oy + obj.y2
-        const isCurved = !!(obj.cp1 && obj.cp2)
         const lineRotation = obj.rotation ?? 0
-        // Use data-line-handle for lines, data-arrow-handle for arrows
-        const handleAttr = isSingleArrow ? 'data-arrow-handle' : 'data-line-handle'
-
-        // Rotation handle for line/arrow
         const lbb = obj.boundingBox
-        const lMinY = oy + lbb.y
-        const lCenterX = ox + lbb.x + lbb.width / 2
-        const lStemLength = 20 / viewport.scale
-        const lRotHandleTopY = lMinY - padding - lStemLength
 
-        const rotationHandle = (
-          <>
-            <line
-              x1={lCenterX} y1={lMinY - padding}
-              x2={lCenterX} y2={lRotHandleTopY}
-              stroke="#4a90d9"
-              strokeWidth={1}
-              vectorEffect="non-scaling-stroke"
-              pointerEvents="none"
-            />
-            <RotateHandle cx={lCenterX} cy={lRotHandleTopY} r={handleRadius} scale={viewport.scale} />
-          </>
-        )
-
-        const endpointHandles = (
-          <>
-            <circle
-              {...{ [handleAttr]: 'p1' }}
-              cx={p1x}
-              cy={p1y}
-              r={handleRadius}
-              fill="white"
-              stroke="#4a90d9"
-              strokeWidth={1}
-              vectorEffect="non-scaling-stroke"
-              style={{ cursor: 'move' }}
-              pointerEvents="auto"
-            />
-            <circle
-              {...{ [handleAttr]: 'p2' }}
-              cx={p2x}
-              cy={p2y}
-              r={handleRadius}
-              fill="white"
-              stroke="#4a90d9"
-              strokeWidth={1}
-              vectorEffect="non-scaling-stroke"
-              style={{ cursor: 'move' }}
-              pointerEvents="auto"
-            />
-          </>
-        )
-
-        // Arrow-specific: arrowhead size handle
-        let headSizeHandle: React.ReactNode = null
-        if (isSingleArrow) {
-          const arrow = obj as ArrowShape
-          const headSize = arrow.arrowHeadSize ?? 16
-          let arrowAngle: number
-          if (isCurved) {
-            let tdx = arrow.x2 - arrow.cp2!.x
-            let tdy = arrow.y2 - arrow.cp2!.y
-            if (Math.abs(tdx) < 0.001 && Math.abs(tdy) < 0.001) {
-              tdx = arrow.x2 - arrow.x1
-              tdy = arrow.y2 - arrow.y1
-            }
-            arrowAngle = Math.atan2(tdy, tdx)
+        if (allLocked) {
+          // Locked: show only bounding box + lock indicator
+          const bx = ox + lbb.x - padding
+          const by = oy + lbb.y - padding
+          const bw = lbb.width + padding * 2
+          const bh = lbb.height + padding * 2
+          const lockedOverlay = (
+            <>
+              <rect
+                x={bx} y={by} width={bw} height={bh}
+                fill="none" stroke="#4a90d9" strokeWidth={1} strokeDasharray="5 3"
+                vectorEffect="non-scaling-stroke" pointerEvents="none"
+              />
+              <LockIndicator x={bx + 2 / viewport.scale} y={by + 2 / viewport.scale} scale={viewport.scale} />
+            </>
+          )
+          if (lineRotation !== 0) {
+            const rcx = bx + bw / 2
+            const rcy = by + bh / 2
+            selectionEl = (
+              <g transform={`rotate(${lineRotation}, ${rcx}, ${rcy})`}>
+                {lockedOverlay}
+              </g>
+            )
           } else {
-            arrowAngle = Math.atan2(p2y - p1y, p2x - p1x)
+            selectionEl = lockedOverlay
           }
-          const headAngle = Math.PI / 6
-          const hsHandleX = p2x - headSize * Math.cos(arrowAngle - headAngle)
-          const hsHandleY = p2y - headSize * Math.sin(arrowAngle - headAngle)
+        } else {
+          const p1x = ox + obj.x1
+          const p1y = oy + obj.y1
+          const p2x = ox + obj.x2
+          const p2y = oy + obj.y2
+          const isCurved = !!(obj.cp1 && obj.cp2)
+          // Use data-line-handle for lines, data-arrow-handle for arrows
+          const handleAttr = isSingleArrow ? 'data-arrow-handle' : 'data-line-handle'
 
-          headSizeHandle = (
-            <circle
-              data-arrow-handle="headSize"
-              cx={hsHandleX}
-              cy={hsHandleY}
-              r={handleRadius}
-              fill="#f5c542"
-              stroke="#c49b1a"
-              strokeWidth={1}
-              vectorEffect="non-scaling-stroke"
-              style={{ cursor: 'ew-resize' }}
-              pointerEvents="auto"
-            />
-          )
-        }
+          // Rotation handle for line/arrow
+          const lMinY = oy + lbb.y
+          const lCenterX = ox + lbb.x + lbb.width / 2
+          const lStemLength = 20 / viewport.scale
+          const lRotHandleTopY = lMinY - padding - lStemLength
 
-        let lineOverlay: React.ReactNode
-        if (isCurved) {
-          const cp1x = ox + obj.cp1!.x
-          const cp1y = oy + obj.cp1!.y
-          const cp2x = ox + obj.cp2!.x
-          const cp2y = oy + obj.cp2!.y
-
-          lineOverlay = (
+          const rotationHandle = (
             <>
-              {rotationHandle}
-              {/* Tangent lines */}
               <line
-                x1={p1x} y1={p1y} x2={cp1x} y2={cp1y}
-                stroke="#4a90d9" strokeWidth={1} strokeDasharray="4 2"
-                vectorEffect="non-scaling-stroke" pointerEvents="none"
+                x1={lCenterX} y1={lMinY - padding}
+                x2={lCenterX} y2={lRotHandleTopY}
+                stroke="#4a90d9"
+                strokeWidth={1}
+                vectorEffect="non-scaling-stroke"
+                pointerEvents="none"
               />
-              <line
-                x1={p2x} y1={p2y} x2={cp2x} y2={cp2y}
-                stroke="#4a90d9" strokeWidth={1} strokeDasharray="4 2"
-                vectorEffect="non-scaling-stroke" pointerEvents="none"
-              />
-              {endpointHandles}
-              {/* Control point handles */}
+              <RotateHandle cx={lCenterX} cy={lRotHandleTopY} r={handleRadius} scale={viewport.scale} />
+            </>
+          )
+
+          const endpointHandles = (
+            <>
               <circle
-                {...{ [handleAttr]: 'cp1' }}
-                cx={cp1x} cy={cp1y} r={handleRadius}
-                fill="#4a90d9" stroke="white" strokeWidth={1}
+                {...{ [handleAttr]: 'p1' }}
+                cx={p1x}
+                cy={p1y}
+                r={handleRadius}
+                fill="white"
+                stroke="#4a90d9"
+                strokeWidth={1}
                 vectorEffect="non-scaling-stroke"
                 style={{ cursor: 'move' }}
                 pointerEvents="auto"
               />
               <circle
-                {...{ [handleAttr]: 'cp2' }}
-                cx={cp2x} cy={cp2y} r={handleRadius}
-                fill="#4a90d9" stroke="white" strokeWidth={1}
+                {...{ [handleAttr]: 'p2' }}
+                cx={p2x}
+                cy={p2y}
+                r={handleRadius}
+                fill="white"
+                stroke="#4a90d9"
+                strokeWidth={1}
                 vectorEffect="non-scaling-stroke"
                 style={{ cursor: 'move' }}
                 pointerEvents="auto"
               />
-              {headSizeHandle}
             </>
           )
-        } else {
-          // Straight — show midpoint indicator
-          const mx = (p1x + p2x) / 2
-          const my = (p1y + p2y) / 2
 
-          lineOverlay = (
-            <>
-              {rotationHandle}
-              {endpointHandles}
+          // Arrow-specific: arrowhead size handle
+          let headSizeHandle: React.ReactNode = null
+          if (isSingleArrow) {
+            const arrow = obj as ArrowShape
+            const headSize = arrow.arrowHeadSize ?? 16
+            let arrowAngle: number
+            if (isCurved) {
+              let tdx = arrow.x2 - arrow.cp2!.x
+              let tdy = arrow.y2 - arrow.cp2!.y
+              if (Math.abs(tdx) < 0.001 && Math.abs(tdy) < 0.001) {
+                tdx = arrow.x2 - arrow.x1
+                tdy = arrow.y2 - arrow.y1
+              }
+              arrowAngle = Math.atan2(tdy, tdx)
+            } else {
+              arrowAngle = Math.atan2(p2y - p1y, p2x - p1x)
+            }
+            const headAngle = Math.PI / 6
+            const hsHandleX = p2x - headSize * Math.cos(arrowAngle - headAngle)
+            const hsHandleY = p2y - headSize * Math.sin(arrowAngle - headAngle)
+
+            headSizeHandle = (
               <circle
-                className="arrow-midpoint-indicator"
-                {...{ [handleAttr]: 'midpoint' }}
-                cx={mx} cy={my} r={handleRadius}
-                fill="transparent" stroke="transparent" strokeWidth={1}
+                data-arrow-handle="headSize"
+                cx={hsHandleX}
+                cy={hsHandleY}
+                r={handleRadius}
+                fill="#f5c542"
+                stroke="#c49b1a"
+                strokeWidth={1}
                 vectorEffect="non-scaling-stroke"
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'ew-resize' }}
                 pointerEvents="auto"
               />
-              {headSizeHandle}
-            </>
-          )
-        }
+            )
+          }
 
-        if (lineRotation !== 0) {
-          const rcx = ox + lbb.x + lbb.width / 2
-          const rcy = oy + lbb.y + lbb.height / 2
-          selectionEl = (
-            <g transform={`rotate(${lineRotation}, ${rcx}, ${rcy})`}>
-              {lineOverlay}
-            </g>
-          )
-        } else {
-          selectionEl = lineOverlay
+          let lineOverlay: React.ReactNode
+          if (isCurved) {
+            const cp1x = ox + obj.cp1!.x
+            const cp1y = oy + obj.cp1!.y
+            const cp2x = ox + obj.cp2!.x
+            const cp2y = oy + obj.cp2!.y
+
+            lineOverlay = (
+              <>
+                {rotationHandle}
+                {/* Tangent lines */}
+                <line
+                  x1={p1x} y1={p1y} x2={cp1x} y2={cp1y}
+                  stroke="#4a90d9" strokeWidth={1} strokeDasharray="4 2"
+                  vectorEffect="non-scaling-stroke" pointerEvents="none"
+                />
+                <line
+                  x1={p2x} y1={p2y} x2={cp2x} y2={cp2y}
+                  stroke="#4a90d9" strokeWidth={1} strokeDasharray="4 2"
+                  vectorEffect="non-scaling-stroke" pointerEvents="none"
+                />
+                {endpointHandles}
+                {/* Control point handles */}
+                <circle
+                  {...{ [handleAttr]: 'cp1' }}
+                  cx={cp1x} cy={cp1y} r={handleRadius}
+                  fill="#4a90d9" stroke="white" strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                  style={{ cursor: 'move' }}
+                  pointerEvents="auto"
+                />
+                <circle
+                  {...{ [handleAttr]: 'cp2' }}
+                  cx={cp2x} cy={cp2y} r={handleRadius}
+                  fill="#4a90d9" stroke="white" strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                  style={{ cursor: 'move' }}
+                  pointerEvents="auto"
+                />
+                {headSizeHandle}
+              </>
+            )
+          } else {
+            // Straight — show midpoint indicator
+            const mx = (p1x + p2x) / 2
+            const my = (p1y + p2y) / 2
+
+            lineOverlay = (
+              <>
+                {rotationHandle}
+                {endpointHandles}
+                <circle
+                  className="arrow-midpoint-indicator"
+                  {...{ [handleAttr]: 'midpoint' }}
+                  cx={mx} cy={my} r={handleRadius}
+                  fill="transparent" stroke="transparent" strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                  style={{ cursor: 'pointer' }}
+                  pointerEvents="auto"
+                />
+                {headSizeHandle}
+              </>
+            )
+          }
+
+          if (lineRotation !== 0) {
+            const rcx = ox + lbb.x + lbb.width / 2
+            const rcy = oy + lbb.y + lbb.height / 2
+            selectionEl = (
+              <g transform={`rotate(${lineRotation}, ${rcx}, ${rcy})`}>
+                {lineOverlay}
+              </g>
+            )
+          } else {
+            selectionEl = lineOverlay
+          }
         }
       } else {
         // Multi-selection or non-line/arrow/polygon: bounding box + resize + rotation handle
@@ -409,33 +496,39 @@ export function SelectionOverlay() {
               vectorEffect="non-scaling-stroke"
               pointerEvents="none"
             />
-            {/* Rotation stem line */}
-            <line
-              x1={rotHandleX} y1={by}
-              x2={rotHandleX} y2={rotHandleTopY}
-              stroke="#4a90d9"
-              strokeWidth={1}
-              vectorEffect="non-scaling-stroke"
-              pointerEvents="none"
-            />
-            {/* Rotation handle */}
-            <RotateHandle cx={rotHandleX} cy={rotHandleTopY} r={handleRadius} scale={viewport.scale} />
-            {corners.map((c) => (
-              <rect
-                key={c.key}
-                data-resize-handle={c.key}
-                x={c.cx - handleSize / 2}
-                y={c.cy - handleSize / 2}
-                width={handleSize}
-                height={handleSize}
-                fill="white"
-                stroke="#4a90d9"
-                strokeWidth={1}
-                vectorEffect="non-scaling-stroke"
-                style={{ cursor: c.cursor }}
-                pointerEvents="auto"
-              />
-            ))}
+            {allLocked ? (
+              <LockIndicator x={bx + 2 / viewport.scale} y={by + 2 / viewport.scale} scale={viewport.scale} />
+            ) : (
+              <>
+                {/* Rotation stem line */}
+                <line
+                  x1={rotHandleX} y1={by}
+                  x2={rotHandleX} y2={rotHandleTopY}
+                  stroke="#4a90d9"
+                  strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                  pointerEvents="none"
+                />
+                {/* Rotation handle */}
+                <RotateHandle cx={rotHandleX} cy={rotHandleTopY} r={handleRadius} scale={viewport.scale} />
+                {corners.map((c) => (
+                  <rect
+                    key={c.key}
+                    data-resize-handle={c.key}
+                    x={c.cx - handleSize / 2}
+                    y={c.cy - handleSize / 2}
+                    width={handleSize}
+                    height={handleSize}
+                    fill="white"
+                    stroke="#4a90d9"
+                    strokeWidth={1}
+                    vectorEffect="non-scaling-stroke"
+                    style={{ cursor: c.cursor }}
+                    pointerEvents="auto"
+                  />
+                ))}
+              </>
+            )}
           </>
         )
 

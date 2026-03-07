@@ -20,6 +20,7 @@ export interface PenStroke {
   strokeWidth?: number
   opacity?: number
   rotation?: number
+  locked?: boolean
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -38,6 +39,7 @@ export interface RectangleShape {
   shadow?: { offset: number; angle?: number }
   pathData: string
   rotation?: number
+  locked?: boolean
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -56,6 +58,7 @@ export interface EllipseShape {
   shadow?: { offset: number; angle?: number }
   pathData: string
   rotation?: number
+  locked?: boolean
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -74,6 +77,7 @@ export interface LineShape {
   opacity?: number
   pathData: string
   rotation?: number
+  locked?: boolean
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -93,6 +97,7 @@ export interface ArrowShape {
   opacity?: number
   pathData: string
   rotation?: number
+  locked?: boolean
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -109,6 +114,7 @@ export interface TextObject {
   color: string
   opacity?: number
   rotation?: number
+  locked?: boolean
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -122,6 +128,7 @@ export interface ImageObject {
   color: string        // unused but required for consistency (set to '#000')
   opacity?: number
   rotation?: number
+  locked?: boolean
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -137,6 +144,7 @@ export interface PolygonShape {
   shadow?: { offset: number; angle?: number }
   pathData: string
   rotation?: number
+  locked?: boolean
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }
@@ -146,6 +154,7 @@ export interface GroupObject {
   id: string
   children: SceneObject[]
   rotation?: number
+  locked?: boolean
   position: { x: number; y: number }
   boundingBox: BoundingBox
 }

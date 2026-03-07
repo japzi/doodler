@@ -180,7 +180,33 @@ export function SelectionActionBar() {
       )}
 
       <div className="selection-action-bar__divider" />
-      <button className="selection-action-bar__button" onClick={() => useStore.getState().deleteObjects(selectedIds)} title="Delete (⌫)">
+      {/* Lock / Unlock */}
+      {(() => {
+        const allLocked = selected.every((o) => o.locked)
+        return (
+          <button
+            className="selection-action-bar__button"
+            onClick={() => useStore.getState().toggleLockObjects(selectedIds)}
+            title={allLocked ? 'Unlock' : 'Lock'}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="7" width="10" height="7" rx="1" />
+              {allLocked ? (
+                <path d="M5 7V5a3 3 0 016 0v2" />
+              ) : (
+                <path d="M5 7V5a3 3 0 016 0" transform="rotate(-20 8 5)" />
+              )}
+            </svg>
+          </button>
+        )
+      })()}
+      <button
+        className="selection-action-bar__button"
+        onClick={() => useStore.getState().deleteObjects(selectedIds)}
+        title="Delete (⌫)"
+        disabled={selected.every((o) => o.locked)}
+        style={selected.every((o) => o.locked) ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}
+      >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M2 4h12" />
           <path d="M5 4V2.5a1 1 0 011-1h4a1 1 0 011 1V4" />

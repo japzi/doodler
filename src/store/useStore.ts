@@ -271,6 +271,7 @@ interface LumiDrawState {
   setActivePolygonPoints: (points: Point[] | null) => void
   setSelectedPolygonVertex: (index: number | null) => void
   updatePolygonGeometry: (id: string, points: Point[]) => void
+  toggleLockObjects: (ids: Set<string>) => void
 }
 
 export const useStore = create<LumiDrawState>((set) => ({
@@ -343,12 +344,19 @@ export const useStore = create<LumiDrawState>((set) => ({
     })),
 
   deleteObjects: (ids) =>
-    set((state) => ({
-      _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
-      _future: [],
-      objects: state.objects.filter((o) => !ids.has(o.id)),
-      selectedIds: new Set(),
-    })),
+    set((state) => {
+      const unlocked = new Set([...ids].filter((id) => {
+        const obj = state.objects.find((o) => o.id === id)
+        return obj && !obj.locked
+      }))
+      if (unlocked.size === 0) return state
+      return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
+        objects: state.objects.filter((o) => !unlocked.has(o.id)),
+        selectedIds: new Set(),
+      }
+    }),
 
   moveObjects: (ids, dx, dy) =>
     set((state) => ({
@@ -741,7 +749,7 @@ export const useStore = create<LumiDrawState>((set) => ({
         _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
         _future: [],
         objects: state.objects.map((o) => {
-          if (!ids.has(o.id)) return o
+          if (!ids.has(o.id) || o.locked) return o
           return applyStyles(o)
         }),
       }
@@ -938,6 +946,22 @@ export const useStore = create<LumiDrawState>((set) => ({
         }
       }),
     })),
+
+  toggleLockObjects: (ids) =>
+    set((state) => {
+      const targets = state.objects.filter((o) => ids.has(o.id))
+      if (targets.length === 0) return state
+      // If any are unlocked, lock all; if all locked, unlock all
+      const allLocked = targets.every((o) => o.locked)
+      const newLocked = !allLocked
+      return {
+        _history: [...state._history.slice(-(MAX_HISTORY - 1)), structuredClone(state.objects)],
+        _future: [],
+        objects: state.objects.map((o) =>
+          ids.has(o.id) ? { ...o, locked: newLocked ? true : undefined } : o
+        ),
+      }
+    }),
 }))
 
 // Auto-save drawing to localStorage on objects/viewport/projectName changes

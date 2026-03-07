@@ -70,7 +70,7 @@ export function usePointerTool() {
       const { objects, selectedIds } = useStore.getState()
       const objId = [...selectedIds][0]
       const obj = objects.find((o) => o.id === objId && o.type === 'polygon') as PolygonShape | undefined
-      if (!obj) return
+      if (!obj || obj.locked) return
 
       if (polygonHandleAttr === 'delete-vertex') {
         const vertexIndex = useStore.getState().selectedPolygonVertex
@@ -122,6 +122,7 @@ export function usePointerTool() {
       const { objects, selectedIds } = useStore.getState()
       const selected = objects.filter((o) => selectedIds.has(o.id))
       if (selected.length === 0) return
+      if (selected.some((o) => o.locked)) return
 
       useStore.getState().saveSnapshot()
 
@@ -167,7 +168,7 @@ export function usePointerTool() {
       const { objects, selectedIds } = useStore.getState()
       const objId = [...selectedIds][0]
       const obj = objects.find((o) => o.id === objId && o.type === handleObjType) as (ArrowShape | LineShape) | undefined
-      if (!obj) return
+      if (!obj || obj.locked) return
 
       if (handleAttrValue === 'midpoint') {
         // Break straight line/arrow into curve — place both control points at midpoint
@@ -197,14 +198,14 @@ export function usePointerTool() {
     // Check for resize handle
     const resizeAttr = target.closest('[data-resize-handle]')?.getAttribute('data-resize-handle') as ResizeHandle | null
     if (resizeAttr) {
-      useStore.getState().saveSnapshot()
-      isResizing.current = true
-      resizeHandle.current = resizeAttr
-
-      // Compute selection bounding box for anchor
       const { objects, selectedIds } = useStore.getState()
       const selected = objects.filter((o) => selectedIds.has(o.id))
       if (selected.length === 0) return
+      if (selected.some((o) => o.locked)) return
+
+      useStore.getState().saveSnapshot()
+      isResizing.current = true
+      resizeHandle.current = resizeAttr
 
       const pad = 8
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
@@ -234,7 +235,7 @@ export function usePointerTool() {
     const objectId = getObjectIdFromEvent(e)
 
     if (objectId) {
-      const { selectedIds } = useStore.getState()
+      const { selectedIds, objects } = useStore.getState()
       if (e.shiftKey) {
         // Toggle object in/out of selection
         const newIds = new Set(selectedIds)
@@ -247,6 +248,9 @@ export function usePointerTool() {
       } else if (!selectedIds.has(objectId)) {
         useStore.getState().setSelectedIds(new Set([objectId]))
       }
+      // Check if clicked object is locked — still select but don't drag
+      const clickedObj = objects.find((o) => o.id === objectId)
+      if (clickedObj?.locked) return
       useStore.getState().saveSnapshot()
       isDragging.current = true
       lastPoint.current = scenePoint
