@@ -113,7 +113,8 @@ export async function exportProject() {
 export async function importProject(file: File): Promise<void> {
   const isZip = file.name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed'
   if (isZip) {
-    const zip = await JSZip.loadAsync(file)
+    const buf = await file.arrayBuffer()
+    const zip = await JSZip.loadAsync(buf)
     const projectFile = zip.file('project.json')
     if (!projectFile) throw new Error('Invalid ZIP: no project.json')
     const jsonStr = await projectFile.async('string')
@@ -146,29 +147,17 @@ export async function importProject(file: File): Promise<void> {
   }
 
   // Legacy .json import
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result as string)
-        if (!data.version || !Array.isArray(data.objects)) {
-          reject(new Error('Invalid file format'))
-          return
-        }
-        useStore.setState({
-          objects: data.objects,
-          viewport: data.viewport ?? { offsetX: 0, offsetY: 0, scale: 1 },
-          selectedIds: new Set(),
-          activeTextInput: null,
-          editingTextId: null,
-        })
-        resolve()
-      } catch {
-        reject(new Error('Failed to parse file'))
-      }
-    }
-    reader.onerror = () => reject(new Error('Failed to read file'))
-    reader.readAsText(file)
+  const text = await file.text()
+  const data = JSON.parse(text)
+  if (!data.version || !Array.isArray(data.objects)) {
+    throw new Error('Invalid file format')
+  }
+  useStore.setState({
+    objects: data.objects,
+    viewport: data.viewport ?? { offsetX: 0, offsetY: 0, scale: 1 },
+    selectedIds: new Set(),
+    activeTextInput: null,
+    editingTextId: null,
   })
 }
 

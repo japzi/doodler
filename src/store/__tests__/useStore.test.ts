@@ -43,7 +43,8 @@ vi.mock('../../fonts/fontRegistry', () => ({
   DEFAULT_FONT_FAMILY: 'sans-serif',
 }))
 
-import { useStore } from '../useStore'
+import { useStore, importProject } from '../useStore'
+import JSZip from 'jszip'
 import type { RectangleShape, ImageObject, GroupObject } from '../../types/scene'
 
 function makeRect(id: string, x = 0, y = 0): RectangleShape {
@@ -391,6 +392,89 @@ describe('useStore', () => {
       expect(group.children).toHaveLength(2)
       expect(group.children[0].type).toBe('image')
       expect(group.children[1].type).toBe('rectangle')
+    })
+  })
+
+  describe('import/export round-trip', () => {
+    function makeImage(id: string, x = 0, y = 0): ImageObject {
+      return {
+        type: 'image',
+        id,
+        src: 'data:image/png;base64,iVBORw0KGgo=',
+        width: 200,
+        height: 100,
+        color: '#000',
+        position: { x, y },
+        boundingBox: { x: 0, y: 0, width: 200, height: 100 },
+      }
+    }
+
+    it('round-trips a JSON project without images', async () => {
+      const rect = makeRect('r1', 10, 20)
+      useStore.getState().addObject(rect)
+
+      const data = JSON.stringify({ version: 1, objects: useStore.getState().objects, viewport: useStore.getState().viewport })
+      const file = new File([data], 'test.json', { type: 'application/json' })
+
+      resetStore()
+      await importProject(file)
+
+      const state = useStore.getState()
+      expect(state.objects).toHaveLength(1)
+      expect(state.objects[0].type).toBe('rectangle')
+      expect(state.objects[0].position).toEqual({ x: 10, y: 20 })
+    })
+
+    it('round-trips a ZIP project with images', async () => {
+      const img = makeImage('img1', 50, 60)
+      const rect = makeRect('r1', 10, 20)
+
+      // Build a ZIP like exportProject would
+      const zip = new JSZip()
+      const imgMatch = img.src.match(/^data:image\/(\w+);base64,(.+)$/)!
+      const ext = imgMatch[1]
+      const binary = atob(imgMatch[2])
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+      zip.file(`images/${img.id}.${ext}`, bytes)
+
+      const strippedImg = { ...img, src: `images/${img.id}.${ext}` }
+      zip.file('project.json', JSON.stringify({
+        version: 1,
+        objects: [strippedImg, rect],
+        viewport: { offsetX: 0, offsetY: 0, scale: 1 },
+      }))
+
+      const buf = await zip.generateAsync({ type: 'arraybuffer' })
+      const file = new File([buf], 'test.zip', { type: 'application/zip' })
+
+      resetStore()
+      await importProject(file)
+
+      const state = useStore.getState()
+      expect(state.objects).toHaveLength(2)
+
+      const loadedImg = state.objects[0]
+      expect(loadedImg.type).toBe('image')
+      if (loadedImg.type !== 'image') return
+      // src should be restored to a base64 data URL, not the relative path
+      expect(loadedImg.src).toMatch(/^data:image\/png;base64,/)
+      expect(loadedImg.position).toEqual({ x: 50, y: 60 })
+
+      expect(state.objects[1].type).toBe('rectangle')
+    })
+
+    it('rejects invalid JSON files', async () => {
+      const file = new File(['not json'], 'bad.json', { type: 'application/json' })
+      await expect(importProject(file)).rejects.toThrow()
+    })
+
+    it('rejects ZIP without project.json', async () => {
+      const zip = new JSZip()
+      zip.file('readme.txt', 'hello')
+      const buf = await zip.generateAsync({ type: 'arraybuffer' })
+      const file = new File([buf], 'bad.zip', { type: 'application/zip' })
+      await expect(importProject(file)).rejects.toThrow('no project.json')
     })
   })
 
