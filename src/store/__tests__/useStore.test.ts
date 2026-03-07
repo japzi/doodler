@@ -681,4 +681,91 @@ describe('useStore', () => {
       expect(state.selectedIds.has('r2')).toBe(true)
     })
   })
+
+  describe('lock objects', () => {
+    it('toggleLockObjects locks unlocked objects', () => {
+      const r1 = makeRect('r1')
+      useStore.getState().addObject(r1)
+
+      useStore.getState().toggleLockObjects(new Set(['r1']))
+      const state = useStore.getState()
+      expect(state.objects[0].locked).toBe(true)
+    })
+
+    it('toggleLockObjects unlocks all-locked objects', () => {
+      const r1 = makeRect('r1')
+      useStore.getState().addObject(r1)
+
+      useStore.getState().toggleLockObjects(new Set(['r1']))
+      expect(useStore.getState().objects[0].locked).toBe(true)
+
+      useStore.getState().toggleLockObjects(new Set(['r1']))
+      expect(useStore.getState().objects[0].locked).toBeFalsy()
+    })
+
+    it('locks all when mix of locked and unlocked', () => {
+      const r1 = makeRect('r1')
+      const r2 = makeRect('r2', 100)
+      useStore.getState().addObject(r1)
+      useStore.getState().addObject(r2)
+
+      // Lock just r1
+      useStore.getState().toggleLockObjects(new Set(['r1']))
+
+      // Toggle both — r2 is unlocked, so lock all
+      useStore.getState().toggleLockObjects(new Set(['r1', 'r2']))
+      const state = useStore.getState()
+      expect(state.objects[0].locked).toBe(true)
+      expect(state.objects[1].locked).toBe(true)
+    })
+
+    it('deleteObjects skips locked objects', () => {
+      const r1 = makeRect('r1')
+      const r2 = makeRect('r2', 100)
+      useStore.getState().addObject(r1)
+      useStore.getState().addObject(r2)
+
+      useStore.getState().toggleLockObjects(new Set(['r1']))
+      useStore.getState().deleteObjects(new Set(['r1', 'r2']))
+
+      const state = useStore.getState()
+      expect(state.objects).toHaveLength(1)
+      expect(state.objects[0].id).toBe('r1')
+    })
+
+    it('deleteObjects returns unchanged state when all are locked', () => {
+      const r1 = makeRect('r1')
+      useStore.getState().addObject(r1)
+      useStore.getState().toggleLockObjects(new Set(['r1']))
+
+      const before = useStore.getState().objects
+      useStore.getState().deleteObjects(new Set(['r1']))
+      expect(useStore.getState().objects).toBe(before)
+    })
+
+    it('updateObjectStyles skips locked objects', () => {
+      const r1 = makeRect('r1')
+      const r2 = makeRect('r2', 100)
+      useStore.getState().addObject(r1)
+      useStore.getState().addObject(r2)
+
+      useStore.getState().toggleLockObjects(new Set(['r1']))
+      useStore.getState().updateObjectStyles(new Set(['r1', 'r2']), { color: '#ff0000' })
+
+      const state = useStore.getState()
+      const obj0 = state.objects[0] as RectangleShape
+      const obj1 = state.objects[1] as RectangleShape
+      expect(obj0.color).toBe('#000') // r1 locked, unchanged
+      expect(obj1.color).toBe('#ff0000') // r2 updated
+    })
+
+    it('toggleLockObjects pushes history', () => {
+      const r1 = makeRect('r1')
+      useStore.getState().addObject(r1)
+      const historyBefore = useStore.getState()._history.length
+
+      useStore.getState().toggleLockObjects(new Set(['r1']))
+      expect(useStore.getState()._history.length).toBeGreaterThan(historyBefore)
+    })
+  })
 })

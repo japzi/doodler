@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import './Canvas.css'
 import { useStore } from '../../store/useStore'
 import { SceneRenderer } from './SceneRenderer'
@@ -7,7 +7,6 @@ import { ActiveShapeRenderer } from './ActiveShapeRenderer'
 import { SelectionOverlay } from './SelectionOverlay'
 import { TextInputOverlay } from './TextInputOverlay'
 import { SelectionActionBar } from './SelectionActionBar'
-import { ContextMenu } from './ContextMenu'
 import { ActivePolygonRenderer } from './ActivePolygonRenderer'
 import { usePenTool } from '../../tools/usePenTool'
 import { usePointerTool } from '../../tools/usePointerTool'
@@ -35,8 +34,6 @@ export function Canvas() {
   const showGrid = useStore((s) => s.showGrid)
   const isPanning = useRef(false)
   const panStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 })
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
-
   const penTool = usePenTool()
   const pointerTool = usePointerTool()
   const shapeTool = useShapeTool()
@@ -44,8 +41,6 @@ export function Canvas() {
   const textTool = useTextTool()
 
   const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
-    setContextMenu(null)
-
     // Middle-click to pan
     if (e.button === 1) {
       isPanning.current = true
@@ -338,16 +333,6 @@ export function Canvas() {
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
-    const objectId = getObjectIdFromEvent(e.nativeEvent)
-    if (objectId) {
-      const { selectedIds } = useStore.getState()
-      if (!selectedIds.has(objectId)) {
-        useStore.getState().setSelectedIds(new Set([objectId]))
-      }
-      setContextMenu({ x: e.clientX, y: e.clientY })
-    } else {
-      setContextMenu(null)
-    }
   }, [])
 
   const cursorClass = activeTool === 'text'
@@ -402,9 +387,6 @@ export function Canvas() {
       </svg>
       <TextInputOverlay />
       <SelectionActionBar />
-      {contextMenu && (
-        <ContextMenu x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)} />
-      )}
     </>
   )
 }

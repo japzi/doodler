@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { applyResize } from '../resize'
+import { rotatePoint } from '../rotation'
 import type { RectangleShape, LineShape, PolygonShape, ImageObject, GroupObject } from '../../types/scene'
 
 function makeRect(overrides: Partial<RectangleShape> = {}): RectangleShape {
@@ -199,6 +200,111 @@ describe('applyResize', () => {
       expect(rc1.height).toBeCloseTo(40)
       expect(rc2.width).toBeCloseTo(80)
       expect(rc2.height).toBeCloseTo(40)
+    })
+  })
+
+  describe('rotated objects', () => {
+    /** Helper: compute visual corner positions of a rotated object's bbox */
+    function getVisualCorners(obj: { position: { x: number; y: number }; boundingBox: { x: number; y: number; width: number; height: number }; rotation?: number }) {
+      const bb = obj.boundingBox
+      const cx = obj.position.x + bb.x + bb.width / 2
+      const cy = obj.position.y + bb.y + bb.height / 2
+      const rot = obj.rotation ?? 0
+      const corners = [
+        { x: obj.position.x + bb.x, y: obj.position.y + bb.y },
+        { x: obj.position.x + bb.x + bb.width, y: obj.position.y + bb.y },
+        { x: obj.position.x + bb.x, y: obj.position.y + bb.y + bb.height },
+        { x: obj.position.x + bb.x + bb.width, y: obj.position.y + bb.y + bb.height },
+      ]
+      return corners.map((p) => rotatePoint(p.x, p.y, cx, cy, rot))
+    }
+
+    it('rotated rectangle: anchor corner stays visually fixed after resize', () => {
+      const rect = makeRect({ rotation: 45, position: { x: 100, y: 100 } })
+      // Anchor at SE corner (opposite of NW resize)
+      const anchor = { x: 100 + 100 + 8, y: 100 + 50 + 8 }
+
+      const oldVisual = getVisualCorners(rect)
+      const result = applyResize(rect, anchor, 0.5, 0.5)
+      const newVisual = getVisualCorners(result)
+
+      // The SE corner (index 3) is closest to anchor — should stay fixed
+      expect(newVisual[3].x).toBeCloseTo(oldVisual[3].x, 1)
+      expect(newVisual[3].y).toBeCloseTo(oldVisual[3].y, 1)
+    })
+
+    it('rotated rectangle: dimensions scale correctly', () => {
+      const rect = makeRect({ rotation: 90, position: { x: 50, y: 50 } })
+      const anchor = { x: 50, y: 50 }
+      const result = applyResize(rect, anchor, 2, 2)
+      if (result.type !== 'rectangle') return
+      expect(result.width).toBeCloseTo(200)
+      expect(result.height).toBeCloseTo(100)
+    })
+
+    it('non-rotated object: fixRotatedPosition is a no-op', () => {
+      const rect = makeRect({ position: { x: 10, y: 20 } })
+      const anchor = { x: 10, y: 20 }
+      const result = applyResize(rect, anchor, 2, 2)
+      if (result.type !== 'rectangle') return
+      expect(result.position).toEqual({ x: 10, y: 20 })
+      expect(result.width).toBe(200)
+      expect(result.height).toBe(100)
+    })
+
+    it('rotated line: anchor endpoint stays visually fixed after resize', () => {
+      const line = makeLine({
+        x1: 0, y1: 0, x2: 100, y2: 50,
+        rotation: 60,
+        position: { x: 200, y: 200 },
+        boundingBox: { x: 0, y: 0, width: 100, height: 50 },
+      })
+      const anchor = { x: 200, y: 200 }
+      const oldBB = line.boundingBox
+      const oldCx = line.position.x + oldBB.x + oldBB.width / 2
+      const oldCy = line.position.y + oldBB.y + oldBB.height / 2
+      const oldP1Visual = rotatePoint(200, 200, oldCx, oldCy, 60)
+
+      const result = applyResize(line, anchor, 1.5, 1.5)
+      const newBB = result.boundingBox
+      const newCx = result.position.x + newBB.x + newBB.width / 2
+      const newCy = result.position.y + newBB.y + newBB.height / 2
+      if (result.type !== 'line') return
+      const newP1Visual = rotatePoint(result.position.x + result.x1, result.position.y + result.y1, newCx, newCy, 60)
+
+      expect(newP1Visual.x).toBeCloseTo(oldP1Visual.x, 1)
+      expect(newP1Visual.y).toBeCloseTo(oldP1Visual.y, 1)
+    })
+
+    it('rotated polygon: anchor corner stays visually fixed after resize', () => {
+      function makePolygon(overrides: Partial<PolygonShape> = {}): PolygonShape {
+        return {
+          type: 'polygon',
+          id: 'pg1',
+          points: [
+            { x: 0, y: 0 },
+            { x: 100, y: 0 },
+            { x: 100, y: 50 },
+            { x: 0, y: 50 },
+          ],
+          color: '#000',
+          pathData: '',
+          position: { x: 50, y: 50 },
+          boundingBox: { x: 0, y: 0, width: 100, height: 50 },
+          ...overrides,
+        }
+      }
+
+      const poly = makePolygon({ rotation: 30 })
+      const anchor = { x: 50 + 100 + 8, y: 50 + 50 + 8 }
+
+      const oldVisual = getVisualCorners(poly)
+      const result = applyResize(poly, anchor, 0.7, 0.7)
+      const newVisual = getVisualCorners(result)
+
+      // SE corner (index 3) closest to anchor
+      expect(newVisual[3].x).toBeCloseTo(oldVisual[3].x, 1)
+      expect(newVisual[3].y).toBeCloseTo(oldVisual[3].y, 1)
     })
   })
 })

@@ -9,6 +9,15 @@ import { snapAngle, rotatePoint, getRotatedBounds } from '../utils/rotation'
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se'
 type LineArrowHandleType = 'p1' | 'p2' | 'cp1' | 'cp2' | 'midpoint' | 'headSize'
 
+/** Compute position correction when a rotated object's bbox center shifts.
+ *  T = (I - R) * D  keeps all visual positions correct. */
+function rotationCenterCorrection(rotation: number, oldCx: number, oldCy: number, newCx: number, newCy: number): Point {
+  const dx = oldCx - newCx, dy = oldCy - newCy
+  const rad = rotation * Math.PI / 180
+  const cos = Math.cos(rad), sin = Math.sin(rad)
+  return { x: (1 - cos) * dx + sin * dy, y: -sin * dx + (1 - cos) * dy }
+}
+
 export function usePointerTool() {
   const isDragging = useRef(false)
   const lastPoint = useRef<Point | null>(null)
@@ -308,14 +317,42 @@ export function usePointerTool() {
     // Polygon handle drag
     if (polygonHandleDrag.current) {
       const { objId, vertexIndex, snapshot, startPoint } = polygonHandleDrag.current
-      const dx = scenePoint.x - startPoint.x
-      const dy = scenePoint.y - startPoint.y
+      let dx = scenePoint.x - startPoint.x
+      let dy = scenePoint.y - startPoint.y
+
+      // Un-rotate delta for rotated polygons
+      const polyRot = snapshot.rotation ?? 0
+      if (polyRot !== 0) {
+        const rad = -polyRot * Math.PI / 180
+        const cos = Math.cos(rad), sin = Math.sin(rad)
+        const rdx = dx * cos - dy * sin
+        const rdy = dx * sin + dy * cos
+        dx = rdx; dy = rdy
+      }
+
       const worldPoints = snapshot.points.map((p, i) => {
         const wx = snapshot.position.x + p.x + (i === vertexIndex ? dx : 0)
         const wy = snapshot.position.y + p.y + (i === vertexIndex ? dy : 0)
         return { x: wx, y: wy }
       })
       useStore.getState().updatePolygonGeometry(objId, worldPoints)
+
+      // Fix visual drift: bbox center (rotation pivot) shifted, correct position
+      if (polyRot !== 0) {
+        const updated = useStore.getState().objects.find((o) => o.id === objId)
+        if (updated) {
+          const oldBB = snapshot.boundingBox
+          const oldCx = snapshot.position.x + oldBB.x + oldBB.width / 2
+          const oldCy = snapshot.position.y + oldBB.y + oldBB.height / 2
+          const newBB = updated.boundingBox
+          const newCx = updated.position.x + newBB.x + newBB.width / 2
+          const newCy = updated.position.y + newBB.y + newBB.height / 2
+          const t = rotationCenterCorrection(polyRot, oldCx, oldCy, newCx, newCy)
+          if (Math.abs(t.x) > 0.001 || Math.abs(t.y) > 0.001) {
+            useStore.getState().moveObjects(new Set([objId]), t.x, t.y)
+          }
+        }
+      }
       return
     }
 
@@ -342,8 +379,18 @@ export function usePointerTool() {
         return
       }
 
-      const dx = scenePoint.x - startPoint.x
-      const dy = scenePoint.y - startPoint.y
+      let dx = scenePoint.x - startPoint.x
+      let dy = scenePoint.y - startPoint.y
+
+      // Un-rotate delta for rotated lines/arrows
+      const laRot = snapshot.rotation ?? 0
+      if (laRot !== 0) {
+        const rad = -laRot * Math.PI / 180
+        const cos = Math.cos(rad), sin = Math.sin(rad)
+        const rdx = dx * cos - dy * sin
+        const rdy = dx * sin + dy * cos
+        dx = rdx; dy = rdy
+      }
 
       // Always pass all coordinates from snapshot for consistency
       const updates: Partial<{ x1: number; y1: number; x2: number; y2: number; cp1: { x: number; y: number }; cp2: { x: number; y: number } }> = {
@@ -382,6 +429,26 @@ export function usePointerTool() {
         ? useStore.getState().updateArrowGeometry
         : useStore.getState().updateLineGeometry
       updateFn(objId, updates)
+
+      // Fix visual drift: bbox center (rotation pivot) shifted, correct position
+      if (laRot !== 0) {
+        const updated = useStore.getState().objects.find((o) => o.id === objId)
+        if (updated) {
+          const oldBB = snapshot.boundingBox
+          const oldCo = { x: oldBB.x + oldBB.width / 2, y: oldBB.y + oldBB.height / 2 }
+          const newBB = updated.boundingBox
+          const newCo = { x: newBB.x + newBB.width / 2, y: newBB.y + newBB.height / 2 }
+          // T relative to snapshot.position; set position absolutely to avoid drift accumulation
+          const t = rotationCenterCorrection(laRot, oldCo.x, oldCo.y, newCo.x, newCo.y)
+          const targetX = snapshot.position.x + t.x
+          const targetY = snapshot.position.y + t.y
+          const moveX = targetX - updated.position.x
+          const moveY = targetY - updated.position.y
+          if (Math.abs(moveX) > 0.001 || Math.abs(moveY) > 0.001) {
+            useStore.getState().moveObjects(new Set([objId]), moveX, moveY)
+          }
+        }
+      }
       return
     }
 
