@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react'
 import { useStore } from '../store/useStore'
 import { generateId } from '../utils/idGenerator'
 import { boundingBoxFromRect, boundingBoxFromLine } from '../utils/boundingBox'
-import { generateRoughRect, generateRoughEllipse, generateRoughLine, generateRoughArrow } from '../rendering/roughPath'
+import { generateRoughRect, generateRoughEllipse, generateRoughCloud, generateRoughLine, generateRoughArrow } from '../rendering/roughPath'
 import type { Point, ShapeToolType } from '../types/scene'
 import { snapToGrid } from '../utils/grid'
 
@@ -37,7 +37,7 @@ export function useShapeTool() {
     const sp = startPoint.current
     const ep = snapToGrid(scenePoint)
 
-    if (tool === 'rectangle' || tool === 'ellipse') {
+    if (tool === 'rectangle' || tool === 'ellipse' || tool === 'cloud') {
       const x = Math.min(sp.x, ep.x)
       const y = Math.min(sp.y, ep.y)
       const width = Math.abs(ep.x - sp.x)
@@ -96,6 +96,17 @@ export function useShapeTool() {
         const pathData = generateRoughEllipse(cx, cy, width, height)
         addObject({
           type: 'ellipse',
+          id, x, y, width, height, color, fillColor, strokeWidth, opacity, pathData,
+          ...(shadowEnabled ? { shadow: { offset: shadowOffset } } : {}),
+          position: { x: 0, y: 0 },
+          boundingBox: boundingBoxFromRect(x, y, width, height),
+        })
+        break
+      }
+      case 'cloud': {
+        const pathData = generateRoughCloud(x, y, width, height)
+        addObject({
+          type: 'cloud',
           id, x, y, width, height, color, fillColor, strokeWidth, opacity, pathData,
           ...(shadowEnabled ? { shadow: { offset: shadowOffset } } : {}),
           position: { x: 0, y: 0 },

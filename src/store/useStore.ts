@@ -729,8 +729,8 @@ export const useStore = create<LumiDrawState>((set) => ({
             updated.pathData = generateStrokePathData(o.points, styles.strokeWidth * 3)
           }
         }
-        if (styles.fillColor !== undefined && (o.type === 'rectangle' || o.type === 'ellipse' || o.type === 'polygon')) updated.fillColor = styles.fillColor
-        if (styles.shadow !== undefined && (o.type === 'rectangle' || o.type === 'ellipse' || o.type === 'polygon')) {
+        if (styles.fillColor !== undefined && (o.type === 'rectangle' || o.type === 'ellipse' || o.type === 'cloud' || o.type === 'polygon')) updated.fillColor = styles.fillColor
+        if (styles.shadow !== undefined && (o.type === 'rectangle' || o.type === 'ellipse' || o.type === 'cloud' || o.type === 'polygon')) {
           if (styles.shadow === null) {
             delete updated.shadow
           } else {

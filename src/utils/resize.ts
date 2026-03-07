@@ -1,5 +1,5 @@
 import type { SceneObject, Point } from '../types/scene'
-import { generateRoughRect, generateRoughEllipse, generateRoughLine, generateRoughCurvedLine, generateRoughArrow, generateRoughCurvedArrow, generateRoughPolygon } from '../rendering/roughPath'
+import { generateRoughRect, generateRoughEllipse, generateRoughCloud, generateRoughLine, generateRoughCurvedLine, generateRoughArrow, generateRoughCurvedArrow, generateRoughPolygon } from '../rendering/roughPath'
 import { generateStrokePathData } from '../rendering/sketchyPath'
 import { boundingBoxFromRect, boundingBoxFromLine, boundingBoxFromCurvedArrow, boundingBoxFromPolygon, computeBoundingBox } from './boundingBox'
 import { measureTextBounds } from './measureText'
@@ -84,6 +84,26 @@ export function applyResize(obj: SceneObject, anchor: Point, scaleX: number, sca
         x: 0, y: 0, width: nw, height: nh,
         position: { x: nx, y: ny },
         pathData: generateRoughRect(0, 0, nw, nh),
+        boundingBox: boundingBoxFromRect(0, 0, nw, nh),
+      }
+      break
+    }
+    case 'cloud': {
+      const wx = obj.position.x + obj.x
+      const wy = obj.position.y + obj.y
+      const wx2 = wx + obj.width
+      const wy2 = wy + obj.height
+      const p1 = scalePoint({ x: wx, y: wy }, anchor, scaleX, scaleY)
+      const p2 = scalePoint({ x: wx2, y: wy2 }, anchor, scaleX, scaleY)
+      const nx = Math.min(p1.x, p2.x)
+      const ny = Math.min(p1.y, p2.y)
+      const nw = Math.abs(p2.x - p1.x)
+      const nh = Math.abs(p2.y - p1.y)
+      resized = {
+        ...obj,
+        x: 0, y: 0, width: nw, height: nh,
+        position: { x: nx, y: ny },
+        pathData: generateRoughCloud(0, 0, nw, nh),
         boundingBox: boundingBoxFromRect(0, 0, nw, nh),
       }
       break

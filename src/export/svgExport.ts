@@ -1,5 +1,5 @@
-import type { SceneObject, TextObject, ImageObject, RectangleShape, EllipseShape, PolygonShape } from '../types/scene'
-import { generateRoughHatchLines } from '../rendering/roughPath'
+import type { SceneObject, TextObject, ImageObject, RectangleShape, EllipseShape, CloudShape, PolygonShape } from '../types/scene'
+import { generateRoughHatchLines, generateCloudOutlinePath } from '../rendering/roughPath'
 import { DEFAULT_FONT_FAMILY, getPresetFont, isPresetFont, getFontFamilyCss } from '../fonts/fontRegistry'
 import { rotatePoint } from '../utils/rotation'
 
@@ -98,7 +98,7 @@ function computeWorldBoundsRecursive(obj: SceneObject, offsetX: number, offsetY:
     }
   } else {
     const bb = obj.boundingBox
-    const shadowOffset = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'polygon') && 'shadow' in obj && obj.shadow ? obj.shadow.offset : 0
+    const shadowOffset = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon') && 'shadow' in obj && obj.shadow ? obj.shadow.offset : 0
     const rotation = obj.rotation ?? 0
 
     if (rotation !== 0) {
@@ -135,7 +135,7 @@ function computeShadowOffset(offset: number, shadowAngle: number, objectRotation
   }
 }
 
-function serializeShadow(obj: RectangleShape | EllipseShape | PolygonShape, indent: string): string {
+function serializeShadow(obj: RectangleShape | EllipseShape | CloudShape | PolygonShape, indent: string): string {
   if (!obj.shadow) return ''
   const offset = obj.shadow.offset
   const shadowAngle = obj.shadow.angle ?? 135
@@ -157,6 +157,9 @@ function serializeShadow(obj: RectangleShape | EllipseShape | PolygonShape, inde
   if (obj.type === 'polygon') {
     const pts = obj.points.map((p) => `${p.x},${p.y}`).join(' ')
     clipShape = `${indent}      <polygon points="${pts}"/>`
+  } else if (obj.type === 'cloud') {
+    const cloudPath = generateCloudOutlinePath(obj.x, obj.y, obj.width, obj.height)
+    clipShape = `${indent}      <path d="${cloudPath}"/>`
   } else if (obj.type === 'rectangle') {
     clipShape = `${indent}      <rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}"/>`
   } else {
@@ -200,14 +203,17 @@ function serializeObject(obj: SceneObject, indent: string): string {
   if (isShape) {
     const fillColor = 'fillColor' in obj && obj.fillColor && obj.fillColor !== 'transparent' ? obj.fillColor : 'none'
     const sw = 'strokeWidth' in obj && obj.strokeWidth ? obj.strokeWidth : 2
-    const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'polygon') && 'shadow' in obj && obj.shadow
-    const shadowSvg = hasShadow ? serializeShadow(obj as RectangleShape | EllipseShape | PolygonShape, indent) : ''
+    const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon') && 'shadow' in obj && obj.shadow
+    const shadowSvg = hasShadow ? serializeShadow(obj as RectangleShape | EllipseShape | CloudShape | PolygonShape, indent) : ''
     const strokePath = `${indent}  <path d="${obj.pathData}" fill="none" stroke="${obj.color}" stroke-width="${sw}"/>`
 
-    if (fillColor !== 'none' && (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'polygon')) {
+    if (fillColor !== 'none' && (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon')) {
       const fillOpacityAttr = obj.opacity !== undefined && obj.opacity !== 1 ? ` opacity="${obj.opacity}"` : ''
       let fillEl = ''
-      if (obj.type === 'rectangle') {
+      if (obj.type === 'cloud') {
+        const cloudPath = generateCloudOutlinePath(obj.x, obj.y, obj.width, obj.height)
+        fillEl = `${indent}  <path d="${cloudPath}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
+      } else if (obj.type === 'rectangle') {
         fillEl = `${indent}  <rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" fill="${fillColor}" stroke="none"${fillOpacityAttr}/>`
       } else if (obj.type === 'polygon') {
         const pts = (obj as PolygonShape).points.map((p) => `${p.x},${p.y}`).join(' ')

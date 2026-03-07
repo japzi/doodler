@@ -213,6 +213,19 @@
 - [x] Changing stroke width on existing pen objects regenerates path geometry
 - [x] All 92 unit tests passing
 
+## v0.9.11 — Cloud Shape Tool `done`
+
+- [x] Cloud shape tool — click-drag to draw (like rectangle/ellipse)
+- [x] Sketchy cloud rendering via roughjs `generator.path()` with cubic bezier curves (3 bumps top, rounded sides, flat bottom)
+- [x] Separate clean outline path for fill/shadow clip (roughjs output only used for stroke)
+- [x] Path scales proportionally with width/height for natural resize behavior
+- [x] Fill color, opacity, and hatched drop shadow support
+- [x] Resize regenerates cloud path at new dimensions
+- [x] SVG/PNG export includes cloud (shadow, fill, stroke)
+- [x] Keyboard shortcut (C → cloud)
+- [x] Toolbar button (cloud icon) after polygon, with fill/shadow/opacity controls
+- [x] All 92 unit tests passing
+
 ## v1.0 — Launch
 
 - [ ] Performance tuning (500+ objects smooth)

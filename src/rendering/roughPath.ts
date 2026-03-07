@@ -69,6 +69,31 @@ export function generateRoughPolygon(points: { x: number; y: number }[]): string
   return drawableToPaths(drawable)
 }
 
+export function generateCloudOutlinePath(x: number, y: number, w: number, h: number): string {
+  return [
+    `M ${x + w * 0.15} ${y + h * 0.85}`,
+    // Bottom (flat-ish, slight upward curve)
+    `C ${x + w * 0.25} ${y + h * 0.95}, ${x + w * 0.75} ${y + h * 0.95}, ${x + w * 0.85} ${y + h * 0.85}`,
+    // Right side
+    `C ${x + w * 1.05} ${y + h * 0.75}, ${x + w * 1.05} ${y + h * 0.45}, ${x + w * 0.85} ${y + h * 0.35}`,
+    // Top-right bump
+    `C ${x + w * 0.95} ${y + h * 0.1}, ${x + w * 0.75} ${y - h * 0.02}, ${x + w * 0.6} ${y + h * 0.12}`,
+    // Top-center bump
+    `C ${x + w * 0.55} ${y - h * 0.05}, ${x + w * 0.35} ${y - h * 0.05}, ${x + w * 0.3} ${y + h * 0.15}`,
+    // Top-left bump
+    `C ${x + w * 0.15} ${y + h * 0.0}, ${x - w * 0.05} ${y + h * 0.15}, ${x + w * 0.05} ${y + h * 0.35}`,
+    // Left side
+    `C ${x - w * 0.08} ${y + h * 0.5}, ${x - w * 0.05} ${y + h * 0.75}, ${x + w * 0.15} ${y + h * 0.85}`,
+    'Z',
+  ].join(' ')
+}
+
+export function generateRoughCloud(x: number, y: number, w: number, h: number): string {
+  const path = generateCloudOutlinePath(x, y, w, h)
+  const drawable = generator.path(path, defaultOptions)
+  return drawableToPaths(drawable)
+}
+
 export function generateRoughHatchLines(x: number, y: number, w: number, h: number, spacing = 8): string[] {
   const step = spacing * Math.SQRT2
   const maxC = w + h

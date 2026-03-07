@@ -133,6 +133,25 @@ export interface ImageObject {
   boundingBox: BoundingBox
 }
 
+export interface CloudShape {
+  type: 'cloud'
+  id: string
+  x: number
+  y: number
+  width: number
+  height: number
+  color: string
+  fillColor?: string
+  strokeWidth?: number
+  opacity?: number
+  shadow?: { offset: number; angle?: number }
+  pathData: string
+  rotation?: number
+  locked?: boolean
+  position: { x: number; y: number }
+  boundingBox: BoundingBox
+}
+
 export interface PolygonShape {
   type: 'polygon'
   id: string
@@ -159,7 +178,7 @@ export interface GroupObject {
   boundingBox: BoundingBox
 }
 
-export type SceneObject = PenStroke | RectangleShape | EllipseShape | LineShape | ArrowShape | PolygonShape | TextObject | ImageObject | GroupObject
+export type SceneObject = PenStroke | RectangleShape | EllipseShape | CloudShape | LineShape | ArrowShape | PolygonShape | TextObject | ImageObject | GroupObject
 
 export interface ViewportTransform {
   offsetX: number
@@ -167,9 +186,9 @@ export interface ViewportTransform {
   scale: number
 }
 
-export type ToolType = 'pointer' | 'pen' | 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'polygon' | 'text'
+export type ToolType = 'pointer' | 'pen' | 'rectangle' | 'ellipse' | 'cloud' | 'line' | 'arrow' | 'polygon' | 'text'
 
-export type ShapeToolType = 'rectangle' | 'ellipse' | 'line' | 'arrow'
+export type ShapeToolType = 'rectangle' | 'ellipse' | 'cloud' | 'line' | 'arrow'
 
 export interface ShapePreview {
   type: ShapeToolType

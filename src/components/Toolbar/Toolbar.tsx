@@ -54,7 +54,7 @@ export function Toolbar() {
 
   const hasSelection = selectedIds.size > 0
   const selectedObjects = hasSelection ? objects.filter((o) => selectedIds.has(o.id)) : []
-  const selectedHasFill = selectedObjects.some((o) => o.type === 'rectangle' || o.type === 'ellipse' || o.type === 'polygon')
+  const selectedHasFill = selectedObjects.some((o) => o.type === 'rectangle' || o.type === 'ellipse' || o.type === 'cloud' || o.type === 'polygon')
   const selectedHasStrokeWidth = selectedObjects.some((o) => o.type !== 'text')
   const selectedHasText = selectedObjects.some((o) => o.type === 'text')
   // Sync toolbar to first selected object's styles
@@ -67,7 +67,7 @@ export function Toolbar() {
     setOpacity(first.opacity ?? 1)
     if ('strokeWidth' in first && first.strokeWidth !== undefined) setStrokeWidth(first.strokeWidth)
     if ('fillColor' in first && first.fillColor !== undefined) setFillColor(first.fillColor)
-    if (first.type === 'rectangle' || first.type === 'ellipse' || first.type === 'polygon') {
+    if (first.type === 'rectangle' || first.type === 'ellipse' || first.type === 'cloud' || first.type === 'polygon') {
       setShadowEnabled(!!first.shadow)
       if (first.shadow) {
         setShadowOffset(first.shadow.offset)
@@ -179,7 +179,7 @@ export function Toolbar() {
     e.target.value = ''
   }, [])
 
-  const isShapeTool = activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'polygon'
+  const isShapeTool = activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'cloud' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'polygon'
 
   return (
     <>
@@ -289,6 +289,15 @@ export function Toolbar() {
             <polygon points="12,2 22,8.5 19,19.5 5,19.5 2,8.5" />
           </svg>
         </button>
+        <button
+          className={`toolbar__button ${activeTool === 'cloud' ? 'toolbar__button--active' : ''}`}
+          onClick={() => setActiveTool('cloud')}
+          data-tooltip="Cloud (C)"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" />
+          </svg>
+        </button>
 
         <div className="toolbar__divider" />
 
@@ -297,7 +306,7 @@ export function Toolbar() {
           if (hasSelection) updateObjectStyles(selectedIds, { color })
         }} label="Stroke" />
 
-        {(activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'polygon' || (activeTool === 'pointer' && selectedHasFill)) && (
+        {(activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'cloud' || activeTool === 'polygon' || (activeTool === 'pointer' && selectedHasFill)) && (
           <ColorPicker value={fillColor} onChange={(color) => {
             setFillColor(color)
             if (hasSelection) updateObjectStyles(selectedIds, { fillColor: color })
@@ -321,7 +330,7 @@ export function Toolbar() {
           </select>
         )}
 
-        {(activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'polygon' || (activeTool === 'pointer' && selectedHasFill)) && (
+        {(activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'cloud' || activeTool === 'polygon' || (activeTool === 'pointer' && selectedHasFill)) && (
           <div className="toolbar__opacity-control">
             <input
               className="toolbar__opacity-slider"
@@ -340,7 +349,7 @@ export function Toolbar() {
           </div>
         )}
 
-        {(activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'polygon' || (activeTool === 'pointer' && selectedHasFill)) && (
+        {(activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'cloud' || activeTool === 'polygon' || (activeTool === 'pointer' && selectedHasFill)) && (
           <>
             <button
               className={`toolbar__button ${shadowEnabled ? 'toolbar__button--active' : ''}`}

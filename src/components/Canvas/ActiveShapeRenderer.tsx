@@ -8,7 +8,7 @@ export function ActiveShapeRenderer() {
 
   if (!preview) return null
 
-  const showFill = (preview.type === 'rectangle' || preview.type === 'ellipse') && fillColor !== 'transparent' && fillColor !== 'none'
+  const showFill = (preview.type === 'rectangle' || preview.type === 'ellipse' || preview.type === 'cloud') && fillColor !== 'transparent' && fillColor !== 'none'
 
   const commonProps = {
     fill: 'none',
@@ -58,6 +58,21 @@ export function ActiveShapeRenderer() {
           y2={preview.y2}
           {...commonProps}
         />
+      )
+    case 'cloud':
+      return (
+        <g>
+          {showFill && (
+            <rect x={preview.x} y={preview.y} width={preview.width} height={preview.height} fill={fillColor} stroke="none" opacity={0.5} />
+          )}
+          <rect
+            x={preview.x}
+            y={preview.y}
+            width={preview.width}
+            height={preview.height}
+            {...commonProps}
+          />
+        </g>
       )
     case 'arrow': {
       const angle = Math.atan2(preview.y2 - preview.y1, preview.x2 - preview.x1)

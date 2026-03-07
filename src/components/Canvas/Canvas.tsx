@@ -17,7 +17,7 @@ import { getObjectIdFromEvent } from '../../utils/hitTest'
 import type { Point } from '../../types/scene'
 import { getGridSize } from '../../utils/grid'
 
-const shapeTools = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow'])
+const shapeTools = new Set<string>(['rectangle', 'ellipse', 'cloud', 'line', 'arrow'])
 
 function screenToScene(clientX: number, clientY: number): Point {
   const { viewport } = useStore.getState()
@@ -271,6 +271,10 @@ export function Canvas() {
         case 'a':
         case 'A':
           useStore.getState().setActiveTool('arrow')
+          break
+        case 'c':
+        case 'C':
+          useStore.getState().setActiveTool('cloud')
           break
         case 's':
         case 'S':

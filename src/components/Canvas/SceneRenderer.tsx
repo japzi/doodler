@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { useStore } from '../../store/useStore'
-import type { SceneObject, TextObject, RectangleShape, EllipseShape, PolygonShape, ImageObject, GroupObject } from '../../types/scene'
-import { generateRoughHatchLines } from '../../rendering/roughPath'
+import type { SceneObject, TextObject, RectangleShape, EllipseShape, CloudShape, PolygonShape, ImageObject, GroupObject } from '../../types/scene'
+import { generateRoughHatchLines, generateCloudOutlinePath } from '../../rendering/roughPath'
 import { DEFAULT_FONT_FAMILY, getFontFamilyCss } from '../../fonts/fontRegistry'
 
 const LINE_HEIGHT_FACTOR = 1.3
@@ -53,7 +53,7 @@ function computeShadowOffset(offset: number, shadowAngle: number, objectRotation
   }
 }
 
-function HatchShadow({ obj }: { obj: RectangleShape | EllipseShape | PolygonShape }) {
+function HatchShadow({ obj }: { obj: RectangleShape | EllipseShape | CloudShape | PolygonShape }) {
   if (!obj.shadow) return null
   const offset = obj.shadow.offset
   const shadowAngle = obj.shadow.angle ?? 135
@@ -81,6 +81,9 @@ function HatchShadow({ obj }: { obj: RectangleShape | EllipseShape | PolygonShap
   if (obj.type === 'polygon') {
     const pts = obj.points.map((p) => `${p.x},${p.y}`).join(' ')
     clipShape = <polygon points={pts} />
+  } else if (obj.type === 'cloud') {
+    const cloudPath = generateCloudOutlinePath(obj.x, obj.y, obj.width, obj.height)
+    clipShape = <path d={cloudPath} />
   } else if (obj.type === 'rectangle') {
     clipShape = <rect x={obj.x} y={obj.y} width={obj.width} height={obj.height} />
   } else {
@@ -109,13 +112,17 @@ function HatchShadow({ obj }: { obj: RectangleShape | EllipseShape | PolygonShap
   )
 }
 
-function FillShape({ obj }: { obj: RectangleShape | EllipseShape | PolygonShape }) {
+function FillShape({ obj }: { obj: RectangleShape | EllipseShape | CloudShape | PolygonShape }) {
   const fillColor = obj.fillColor ?? 'none'
   if (fillColor === 'none' || fillColor === 'transparent') return null
   const opacity = obj.opacity ?? 1
 
   if (obj.type === 'rectangle') {
     return <rect x={obj.x} y={obj.y} width={obj.width} height={obj.height} fill={fillColor} stroke="none" opacity={opacity !== 1 ? opacity : undefined} />
+  }
+  if (obj.type === 'cloud') {
+    const cloudPath = generateCloudOutlinePath(obj.x, obj.y, obj.width, obj.height)
+    return <path d={cloudPath} fill={fillColor} stroke="none" opacity={opacity !== 1 ? opacity : undefined} />
   }
   if (obj.type === 'polygon') {
     const pts = obj.points.map((p) => `${p.x},${p.y}`).join(' ')
@@ -129,8 +136,8 @@ const HIT_TARGET_WIDTH = 20
 const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObject, TextObject | ImageObject | GroupObject> }) {
   const isShape = obj.type !== 'pen'
   const strokeWidth = 'strokeWidth' in obj ? (obj.strokeWidth ?? 2) : 2
-  const hasFill = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'polygon') && obj.fillColor && obj.fillColor !== 'none' && obj.fillColor !== 'transparent'
-  const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'polygon') && obj.shadow
+  const hasFill = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon') && obj.fillColor && obj.fillColor !== 'none' && obj.fillColor !== 'transparent'
+  const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon') && obj.shadow
   const needsHitTarget = strokeWidth < HIT_TARGET_WIDTH
 
   if (hasFill) {
@@ -140,8 +147,8 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
         data-object-id={obj.id}
         style={{ cursor: 'default' }}
       >
-        {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape | PolygonShape} />}
-        <FillShape obj={obj as RectangleShape | EllipseShape | PolygonShape} />
+        {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape | CloudShape | PolygonShape} />}
+        <FillShape obj={obj as RectangleShape | EllipseShape | CloudShape | PolygonShape} />
         <path
           d={obj.pathData}
           fill="none"
@@ -158,7 +165,7 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
       data-object-id={obj.id}
       style={{ cursor: 'default' }}
     >
-      {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape | PolygonShape} />}
+      {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape | CloudShape | PolygonShape} />}
       {needsHitTarget && (
         <path
           d={obj.pathData}
@@ -218,15 +225,15 @@ function ChildTextElement({ obj }: { obj: TextObject }) {
 function ChildPathElement({ obj }: { obj: Exclude<SceneObject, TextObject | ImageObject | GroupObject> }) {
   const isShape = obj.type !== 'pen'
   const strokeWidth = 'strokeWidth' in obj ? (obj.strokeWidth ?? 2) : 2
-  const hasFill = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'polygon') && obj.fillColor && obj.fillColor !== 'none' && obj.fillColor !== 'transparent'
-  const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'polygon') && obj.shadow
+  const hasFill = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon') && obj.fillColor && obj.fillColor !== 'none' && obj.fillColor !== 'transparent'
+  const hasShadow = (obj.type === 'rectangle' || obj.type === 'ellipse' || obj.type === 'cloud' || obj.type === 'polygon') && obj.shadow
   const needsHitTarget = strokeWidth < HIT_TARGET_WIDTH
 
   if (hasFill) {
     return (
       <g transform={buildTransform(obj)} style={{ cursor: 'default' }}>
-        {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape | PolygonShape} />}
-        <FillShape obj={obj as RectangleShape | EllipseShape | PolygonShape} />
+        {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape | CloudShape | PolygonShape} />}
+        <FillShape obj={obj as RectangleShape | EllipseShape | CloudShape | PolygonShape} />
         <path d={obj.pathData} fill="none" stroke={obj.color} strokeWidth={strokeWidth} />
       </g>
     )
@@ -234,7 +241,7 @@ function ChildPathElement({ obj }: { obj: Exclude<SceneObject, TextObject | Imag
 
   return (
     <g transform={buildTransform(obj)} style={{ cursor: 'default' }}>
-      {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape | PolygonShape} />}
+      {hasShadow && <HatchShadow obj={obj as RectangleShape | EllipseShape | CloudShape | PolygonShape} />}
       {needsHitTarget && <path d={obj.pathData} fill="none" stroke="transparent" strokeWidth={HIT_TARGET_WIDTH} />}
       <path
         d={obj.pathData}
