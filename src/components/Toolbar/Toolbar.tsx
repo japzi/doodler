@@ -8,6 +8,8 @@ import { ColorPicker } from './ColorPicker'
 import { FontPicker } from './FontPicker'
 import { DEFAULT_FONT_FAMILY } from '../../fonts/fontRegistry'
 import { supabase } from '../../lib/supabase'
+import type { ImageObject } from '../../types/scene'
+import { generateId } from '../../utils/idGenerator'
 
 export function Toolbar() {
   const activeTool = useStore((s) => s.activeTool)
@@ -46,6 +48,7 @@ export function Toolbar() {
   const canRedo = useStore((s) => s._future.length > 0)
   const [toast, setToast] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   const hasSelection = selectedIds.size > 0
   const selectedObjects = hasSelection ? objects.filter((o) => selectedIds.has(o.id)) : []
@@ -83,8 +86,8 @@ export function Toolbar() {
     setTimeout(() => setToast(null), 2000)
   }, [clearDrawing])
 
-  const handleSave = useCallback(() => {
-    exportProject()
+  const handleSave = useCallback(async () => {
+    await exportProject()
   }, [])
 
   const handleLoad = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,6 +131,43 @@ export function Toolbar() {
       setToast('Failed to export PNG')
     }
     setTimeout(() => setToast(null), 2000)
+  }, [])
+
+  const handleImportImage = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      const img = new Image()
+      img.onload = () => {
+        const MAX_DIM = 400
+        let w = img.naturalWidth
+        let h = img.naturalHeight
+        if (w > MAX_DIM || h > MAX_DIM) {
+          const scale = MAX_DIM / Math.max(w, h)
+          w = Math.round(w * scale)
+          h = Math.round(h * scale)
+        }
+        const { viewport } = useStore.getState()
+        const cx = (-viewport.offsetX + window.innerWidth / 2) / viewport.scale - w / 2
+        const cy = (-viewport.offsetY + window.innerHeight / 2) / viewport.scale - h / 2
+        const imageObj: ImageObject = {
+          type: 'image',
+          id: generateId(),
+          src: dataUrl,
+          width: w,
+          height: h,
+          color: '#000',
+          position: { x: cx, y: cy },
+          boundingBox: { x: 0, y: 0, width: w, height: h },
+        }
+        useStore.getState().addObject(imageObj)
+      }
+      img.src = dataUrl
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
   }, [])
 
   const isShapeTool = activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'line' || activeTool === 'arrow'
@@ -418,6 +458,25 @@ export function Toolbar() {
           </svg>
         </button>
 
+        <button
+          className="toolbar__button"
+          onClick={() => imageInputRef.current?.click()}
+          data-tooltip="Import Image"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+        </button>
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleImportImage}
+        />
+
         <div className="toolbar__divider" />
 
         <button
@@ -498,7 +557,7 @@ export function Toolbar() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".json"
+          accept=".json,.zip"
           style={{ display: 'none' }}
           onChange={handleLoad}
         />

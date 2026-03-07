@@ -1,4 +1,4 @@
-import type { SceneObject, TextObject, RectangleShape, EllipseShape } from '../types/scene'
+import type { SceneObject, TextObject, ImageObject, RectangleShape, EllipseShape } from '../types/scene'
 import { generateRoughHatchLines } from '../rendering/roughPath'
 import { DEFAULT_FONT_FAMILY, getPresetFont, isPresetFont, getFontFamilyCss } from '../fonts/fontRegistry'
 
@@ -112,7 +112,16 @@ function serializeShadow(obj: RectangleShape | EllipseShape, indent: string): st
   return `${indent}  <g transform="translate(${offset}, ${offset})">\n${indent}    <defs>\n${indent}      <clipPath id="${clipId}">\n${clipShape}\n${indent}      </clipPath>\n${indent}    </defs>\n${indent}    <g clip-path="url(#${clipId})">\n${hatchLines}\n${indent}    </g>\n${outlinePath}\n${indent}  </g>`
 }
 
+function serializeImageObject(obj: ImageObject, indent: string): string {
+  const tx = obj.position.x
+  const ty = obj.position.y
+  const transform = tx !== 0 || ty !== 0 ? ` transform="translate(${tx}, ${ty})"` : ''
+  const opacityAttr = obj.opacity !== undefined && obj.opacity !== 1 ? ` opacity="${obj.opacity}"` : ''
+  return `${indent}<image href="${obj.src}" x="0" y="0" width="${obj.width}" height="${obj.height}"${opacityAttr}${transform}/>`
+}
+
 function serializeObject(obj: SceneObject, indent: string): string {
+  if (obj.type === 'image') return serializeImageObject(obj, indent)
   if (obj.type === 'text') {
     return serializeTextObject(obj, indent)
   }
@@ -217,9 +226,10 @@ export async function serializeToSvg(objects: SceneObject[]): Promise<string> {
 
   const elements = objects
     .map((obj) => serializeObject(obj, '  '))
+    .filter(Boolean)
     .join('\n')
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vbX} ${vbY} ${vbW} ${vbH}">\n${styleBlock}${elements}\n</svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="${vbX} ${vbY} ${vbW} ${vbH}">\n${styleBlock}${elements}\n</svg>`
 }
 
 export async function downloadSvg(objects: SceneObject[]): Promise<void> {

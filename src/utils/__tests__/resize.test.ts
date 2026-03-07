@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { applyResize } from '../resize'
-import type { RectangleShape, LineShape, GroupObject } from '../../types/scene'
+import type { RectangleShape, LineShape, ImageObject, GroupObject } from '../../types/scene'
 
 function makeRect(overrides: Partial<RectangleShape> = {}): RectangleShape {
   return {
@@ -78,6 +78,56 @@ describe('applyResize', () => {
       const worldY2 = result.position.y + result.y2
       expect(worldX2).toBeCloseTo(50)
       expect(worldY2).toBeCloseTo(50)
+    })
+  })
+
+  describe('image', () => {
+    function makeImage(overrides: Partial<ImageObject> = {}): ImageObject {
+      return {
+        type: 'image',
+        id: 'img1',
+        src: 'data:image/png;base64,abc',
+        width: 200,
+        height: 100,
+        color: '#000',
+        position: { x: 0, y: 0 },
+        boundingBox: { x: 0, y: 0, width: 200, height: 100 },
+        ...overrides,
+      }
+    }
+
+    it('scales width and height from origin anchor', () => {
+      const img = makeImage()
+      const result = applyResize(img, { x: 0, y: 0 }, 2, 2)
+      expect(result.type).toBe('image')
+      if (result.type !== 'image') return
+      expect(result.width).toBe(400)
+      expect(result.height).toBe(200)
+      expect(result.position).toEqual({ x: 0, y: 0 })
+    })
+
+    it('repositions around a non-origin anchor', () => {
+      const img = makeImage({ position: { x: 50, y: 50 } })
+      const result = applyResize(img, { x: 50, y: 50 }, 2, 2)
+      if (result.type !== 'image') return
+      expect(result.position).toEqual({ x: 50, y: 50 })
+      expect(result.width).toBe(400)
+      expect(result.height).toBe(200)
+    })
+
+    it('updates bounding box to match new dimensions', () => {
+      const img = makeImage()
+      const result = applyResize(img, { x: 0, y: 0 }, 3, 2)
+      expect(result.boundingBox.width).toBe(600)
+      expect(result.boundingBox.height).toBe(200)
+    })
+
+    it('preserves src and color', () => {
+      const img = makeImage()
+      const result = applyResize(img, { x: 0, y: 0 }, 2, 2)
+      if (result.type !== 'image') return
+      expect(result.src).toBe('data:image/png;base64,abc')
+      expect(result.color).toBe('#000')
     })
   })
 

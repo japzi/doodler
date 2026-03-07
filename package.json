@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
+    "jszip": "^3.10.1",
     "nanoid": "^5.0.9",
     "perfect-freehand": "^1.2.2",
     "react": "^19.0.0",

@@ -44,7 +44,7 @@ vi.mock('../../fonts/fontRegistry', () => ({
 }))
 
 import { useStore } from '../useStore'
-import type { RectangleShape, GroupObject } from '../../types/scene'
+import type { RectangleShape, ImageObject, GroupObject } from '../../types/scene'
 
 function makeRect(id: string, x = 0, y = 0): RectangleShape {
   return {
@@ -299,6 +299,98 @@ describe('useStore', () => {
       useStore.getState().sendToBack(new Set(['r3']))
       const ids = useStore.getState().objects.map((o) => o.id)
       expect(ids).toEqual(['r3', 'r1', 'r2'])
+    })
+  })
+
+  describe('image objects', () => {
+    function makeImage(id: string, x = 0, y = 0): ImageObject {
+      return {
+        type: 'image',
+        id,
+        src: 'data:image/png;base64,abc',
+        width: 200,
+        height: 100,
+        color: '#000',
+        position: { x, y },
+        boundingBox: { x: 0, y: 0, width: 200, height: 100 },
+      }
+    }
+
+    it('adds image object', () => {
+      const img = makeImage('img1', 50, 50)
+      useStore.getState().addObject(img)
+      const state = useStore.getState()
+      expect(state.objects).toHaveLength(1)
+      expect(state.objects[0].type).toBe('image')
+      if (state.objects[0].type !== 'image') return
+      expect(state.objects[0].src).toBe('data:image/png;base64,abc')
+    })
+
+    it('deletes image object', () => {
+      const img = makeImage('img1')
+      useStore.getState().addObject(img)
+      useStore.getState().deleteObjects(new Set(['img1']))
+      expect(useStore.getState().objects).toHaveLength(0)
+    })
+
+    it('moves image object', () => {
+      const img = makeImage('img1', 10, 20)
+      useStore.getState().addObject(img)
+      useStore.getState().moveObjects(new Set(['img1']), 5, 10)
+      const moved = useStore.getState().objects[0]
+      expect(moved.position).toEqual({ x: 15, y: 30 })
+    })
+
+    it('duplicates image object with new ID', () => {
+      const img = makeImage('img1', 50, 50)
+      useStore.getState().addObject(img)
+      useStore.getState().duplicateObjects(new Set(['img1']))
+      const state = useStore.getState()
+      expect(state.objects).toHaveLength(2)
+      expect(state.objects[1].id).not.toBe('img1')
+      expect(state.objects[1].type).toBe('image')
+      expect(state.objects[1].position).toEqual({ x: 60, y: 60 })
+    })
+
+    it('copy/paste image object', () => {
+      const img = makeImage('img1', 10, 10)
+      useStore.getState().addObject(img)
+      useStore.getState().copyObjects(new Set(['img1']))
+      useStore.getState().pasteObjects()
+      const state = useStore.getState()
+      expect(state.objects).toHaveLength(2)
+      const pasted = state.objects[1]
+      expect(pasted.type).toBe('image')
+      expect(pasted.position).toEqual({ x: 30, y: 30 })
+    })
+
+    it('undo/redo works with image objects', () => {
+      const img = makeImage('img1')
+      useStore.getState().addObject(img)
+      expect(useStore.getState().objects).toHaveLength(1)
+
+      useStore.getState().undo()
+      expect(useStore.getState().objects).toHaveLength(0)
+
+      useStore.getState().redo()
+      expect(useStore.getState().objects).toHaveLength(1)
+      expect(useStore.getState().objects[0].type).toBe('image')
+    })
+
+    it('groups image with rectangle', () => {
+      const img = makeImage('img1', 0, 0)
+      const rect = makeRect('r1', 300, 300)
+      useStore.getState().addObject(img)
+      useStore.getState().addObject(rect)
+
+      useStore.getState().groupObjects(new Set(['img1', 'r1']))
+      const state = useStore.getState()
+      expect(state.objects).toHaveLength(1)
+      const group = state.objects[0] as GroupObject
+      expect(group.type).toBe('group')
+      expect(group.children).toHaveLength(2)
+      expect(group.children[0].type).toBe('image')
+      expect(group.children[1].type).toBe('rectangle')
     })
   })
 

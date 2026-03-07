@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { useStore } from '../../store/useStore'
-import type { SceneObject, TextObject, RectangleShape, EllipseShape, GroupObject } from '../../types/scene'
+import type { SceneObject, TextObject, RectangleShape, EllipseShape, ImageObject, GroupObject } from '../../types/scene'
 import { generateRoughHatchLines } from '../../rendering/roughPath'
 import { DEFAULT_FONT_FAMILY, getFontFamilyCss } from '../../fonts/fontRegistry'
 
@@ -73,7 +73,7 @@ function FillShape({ obj }: { obj: RectangleShape | EllipseShape }) {
 
 const HIT_TARGET_WIDTH = 20
 
-const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObject, TextObject | GroupObject> }) {
+const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObject, TextObject | ImageObject | GroupObject> }) {
   const isShape = obj.type !== 'pen'
   const strokeWidth = 'strokeWidth' in obj ? (obj.strokeWidth ?? 2) : 2
   const hasFill = (obj.type === 'rectangle' || obj.type === 'ellipse') && obj.fillColor && obj.fillColor !== 'none' && obj.fillColor !== 'transparent'
@@ -124,6 +124,20 @@ const PathElement = memo(function PathElement({ obj }: { obj: Exclude<SceneObjec
   )
 })
 
+const ImageElement = memo(function ImageElement({ obj }: { obj: ImageObject }) {
+  return (
+    <image
+      href={obj.src}
+      x={0} y={0}
+      width={obj.width} height={obj.height}
+      opacity={obj.opacity ?? 1}
+      transform={`translate(${obj.position.x}, ${obj.position.y})`}
+      data-object-id={obj.id}
+      style={{ cursor: 'default' }}
+    />
+  )
+})
+
 function ChildTextElement({ obj }: { obj: TextObject }) {
   const lines = obj.text.split('\n')
   const lineHeight = obj.fontSize * LINE_HEIGHT_FACTOR
@@ -148,7 +162,7 @@ function ChildTextElement({ obj }: { obj: TextObject }) {
   )
 }
 
-function ChildPathElement({ obj }: { obj: Exclude<SceneObject, TextObject | GroupObject> }) {
+function ChildPathElement({ obj }: { obj: Exclude<SceneObject, TextObject | ImageObject | GroupObject> }) {
   const isShape = obj.type !== 'pen'
   const strokeWidth = 'strokeWidth' in obj ? (obj.strokeWidth ?? 2) : 2
   const hasFill = (obj.type === 'rectangle' || obj.type === 'ellipse') && obj.fillColor && obj.fillColor !== 'none' && obj.fillColor !== 'transparent'
@@ -179,6 +193,19 @@ function ChildPathElement({ obj }: { obj: Exclude<SceneObject, TextObject | Grou
   )
 }
 
+function ChildImageElement({ obj }: { obj: ImageObject }) {
+  return (
+    <image
+      href={obj.src}
+      x={0} y={0}
+      width={obj.width} height={obj.height}
+      opacity={obj.opacity ?? 1}
+      transform={`translate(${obj.position.x}, ${obj.position.y})`}
+      style={{ cursor: 'default' }}
+    />
+  )
+}
+
 function renderGroupChild(obj: SceneObject): React.ReactNode {
   if (obj.type === 'group') {
     return (
@@ -188,6 +215,7 @@ function renderGroupChild(obj: SceneObject): React.ReactNode {
     )
   }
   if (obj.type === 'text') return <ChildTextElement key={obj.id} obj={obj} />
+  if (obj.type === 'image') return <ChildImageElement key={obj.id} obj={obj} />
   return <ChildPathElement key={obj.id} obj={obj} />
 }
 
@@ -216,6 +244,9 @@ export function SceneRenderer() {
         }
         if (obj.type === 'text') {
           return <TextElement key={obj.id} obj={obj} />
+        }
+        if (obj.type === 'image') {
+          return <ImageElement key={obj.id} obj={obj} />
         }
         return <PathElement key={obj.id} obj={obj} />
       })}

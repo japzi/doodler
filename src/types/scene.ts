@@ -107,6 +107,18 @@ export interface TextObject {
   boundingBox: BoundingBox
 }
 
+export interface ImageObject {
+  type: 'image'
+  id: string
+  src: string          // base64 data URL
+  width: number
+  height: number
+  color: string        // unused but required for consistency (set to '#000')
+  opacity?: number
+  position: { x: number; y: number }
+  boundingBox: BoundingBox
+}
+
 export interface GroupObject {
   type: 'group'
   id: string
@@ -115,7 +127,7 @@ export interface GroupObject {
   boundingBox: BoundingBox
 }
 
-export type SceneObject = PenStroke | RectangleShape | EllipseShape | LineShape | ArrowShape | TextObject | GroupObject
+export type SceneObject = PenStroke | RectangleShape | EllipseShape | LineShape | ArrowShape | TextObject | ImageObject | GroupObject
 
 export interface ViewportTransform {
   offsetX: number

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import type { SceneObject, GroupObject, TextObject, Point, ViewportTransform, ToolType, ShapePreview, BoundingBox } from '../types/scene'
+import JSZip from 'jszip'
+import type { SceneObject, GroupObject, ImageObject, TextObject, Point, ViewportTransform, ToolType, ShapePreview, BoundingBox } from '../types/scene'
 import { generateId } from '../utils/idGenerator'
 import { applyResize } from '../utils/resize'
 import { getWorldBounds, boundingBoxFromLine, boundingBoxFromCurvedArrow } from '../utils/boundingBox'
@@ -27,18 +28,123 @@ function persistDrawing(objects: SceneObject[], viewport: ViewportTransform) {
   } catch { /* ignore */ }
 }
 
-export function exportProject() {
+function collectImages(objs: SceneObject[]): ImageObject[] {
+  const images: ImageObject[] = []
+  for (const obj of objs) {
+    if (obj.type === 'image') images.push(obj)
+    else if (obj.type === 'group') images.push(...collectImages(obj.children))
+  }
+  return images
+}
+
+function dataUrlToBlob(dataUrl: string): { blob: Uint8Array; ext: string } {
+  const match = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/)
+  if (!match) return { blob: new Uint8Array(), ext: 'png' }
+  const ext = match[1] === 'jpeg' ? 'jpg' : match[1]
+  const binary = atob(match[2])
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return { blob: bytes, ext }
+}
+
+function replaceImageSrcs(objs: SceneObject[], mapping: Map<string, string>): SceneObject[] {
+  return objs.map((obj) => {
+    if (obj.type === 'image' && mapping.has(obj.id)) {
+      return { ...obj, src: mapping.get(obj.id)! }
+    }
+    if (obj.type === 'group') {
+      return { ...obj, children: replaceImageSrcs(obj.children, mapping) }
+    }
+    return obj
+  })
+}
+
+function restoreImageSrcs(objs: SceneObject[], mapping: Map<string, string>): SceneObject[] {
+  return objs.map((obj) => {
+    if (obj.type === 'image' && mapping.has(obj.src)) {
+      return { ...obj, src: mapping.get(obj.src)! }
+    }
+    if (obj.type === 'group') {
+      return { ...obj, children: restoreImageSrcs(obj.children, mapping) }
+    }
+    return obj
+  })
+}
+
+export async function exportProject() {
   const { objects, viewport } = useStore.getState()
-  const blob = new Blob([JSON.stringify({ version: 1, objects, viewport }, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
+  const images = collectImages(objects)
+
+  if (images.length === 0) {
+    const blob = new Blob([JSON.stringify({ version: 1, objects, viewport }, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'lumidraw-drawing.json'
+    a.click()
+    URL.revokeObjectURL(url)
+    return
+  }
+
+  const zip = new JSZip()
+  const srcMapping = new Map<string, string>()
+
+  for (const img of images) {
+    const { blob, ext } = dataUrlToBlob(img.src)
+    const filename = `images/${img.id}.${ext}`
+    zip.file(filename, blob)
+    srcMapping.set(img.id, filename)
+  }
+
+  const strippedObjects = replaceImageSrcs(objects, srcMapping)
+  zip.file('project.json', JSON.stringify({ version: 1, objects: strippedObjects, viewport }, null, 2))
+
+  const content = await zip.generateAsync({ type: 'blob' })
+  const url = URL.createObjectURL(content)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'lumidraw-drawing.json'
+  a.download = 'lumidraw-drawing.zip'
+  document.body.appendChild(a)
   a.click()
+  document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
 
-export function importProject(file: File): Promise<void> {
+export async function importProject(file: File): Promise<void> {
+  if (file.name.endsWith('.zip')) {
+    const zip = await JSZip.loadAsync(file)
+    const projectFile = zip.file('project.json')
+    if (!projectFile) throw new Error('Invalid ZIP: no project.json')
+    const jsonStr = await projectFile.async('string')
+    const data = JSON.parse(jsonStr)
+    if (!data.version || !Array.isArray(data.objects)) throw new Error('Invalid file format')
+
+    // Restore image src fields from ZIP image files
+    const srcMapping = new Map<string, string>()
+    const imageFiles = Object.keys(zip.files).filter((f) => f.startsWith('images/'))
+    for (const path of imageFiles) {
+      const imgData = await zip.file(path)!.async('uint8array')
+      const ext = path.split('.').pop() ?? 'png'
+      const mimeExt = ext === 'jpg' ? 'jpeg' : ext
+      let binary = ''
+      for (let i = 0; i < imgData.length; i++) binary += String.fromCharCode(imgData[i])
+      const base64 = btoa(binary)
+      const dataUrl = `data:image/${mimeExt};base64,${base64}`
+      srcMapping.set(path, dataUrl)
+    }
+
+    const objects = restoreImageSrcs(data.objects, srcMapping)
+    useStore.setState({
+      objects,
+      viewport: data.viewport ?? { offsetX: 0, offsetY: 0, scale: 1 },
+      selectedIds: new Set(),
+      activeTextInput: null,
+      editingTextId: null,
+    })
+    return
+  }
+
+  // Legacy .json import
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => {

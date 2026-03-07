@@ -117,7 +117,7 @@
 
 ## v0.9.2 — Testing & CI `done`
 
-- [x] Vitest unit test suite (47 tests)
+- [x] Vitest unit test suite (66 tests)
 - [x] Bounding box utility tests (rect, line, curved arrow, compute, intersect, world bounds)
 - [x] Resize logic tests (rectangle, line, group recursive)
 - [x] Zustand store action tests (undo/redo, delete, duplicate, copy/cut/paste, z-order, group/ungroup)
@@ -132,6 +132,19 @@
 - [x] Redo button in toolbar (wired to existing redo, disabled when no future)
 - [x] Select All button in toolbar utility section (switches to pointer, selects all objects)
 - [x] Delete button in SelectionActionBar (trash icon, removes selected objects)
+
+## v0.9.4 — Image Import + ZIP Save/Load `done`
+
+- [x] Import raster images (PNG, JPG, etc.) onto canvas via toolbar button
+- [x] Images are selectable, movable, and resizable like other objects
+- [x] Images work inside groups (group/ungroup)
+- [x] SVG export embeds images as base64 `<image>` elements
+- [x] PNG export includes images (via SVG pipeline)
+- [x] Save as ZIP when images present (images/ folder + project.json)
+- [x] Load ZIP files (restores base64 data URLs from image files)
+- [x] Backward-compatible: still loads legacy .json files
+- [x] localStorage auto-save works with images (base64 inline)
+- [x] Unit tests for image resize, store operations, and SVG export (19 new tests, 66 total)
 
 ## v1.0 — Launch
 
