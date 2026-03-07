@@ -321,8 +321,17 @@ export function usePointerTool() {
 
       // Arrow head size drag
       if (handleType === 'headSize' && objType === 'arrow') {
-        const tipX = snapshot.position.x + snapshot.x2
-        const tipY = snapshot.position.y + snapshot.y2
+        let tipX = snapshot.position.x + snapshot.x2
+        let tipY = snapshot.position.y + snapshot.y2
+        const rotation = snapshot.rotation ?? 0
+        if (rotation !== 0) {
+          const bb = snapshot.boundingBox
+          const cx = snapshot.position.x + bb.x + bb.width / 2
+          const cy = snapshot.position.y + bb.y + bb.height / 2
+          const rotated = rotatePoint(tipX, tipY, cx, cy, rotation)
+          tipX = rotated.x
+          tipY = rotated.y
+        }
         const dist = Math.sqrt((scenePoint.x - tipX) ** 2 + (scenePoint.y - tipY) ** 2)
         const newSize = Math.max(4, Math.min(64, Math.round(dist)))
         useStore.getState().updateArrowHeadSize(new Set([objId]), newSize)
