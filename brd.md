@@ -44,14 +44,15 @@ There is a need for a lightweight, purpose-built drawing editor that produces cl
 |------|-------------|
 | Drawing canvas | Infinite or large canvas with pan and zoom |
 | Pen/pencil tool | Freehand drawing that produces sketchy vector paths |
-| Shape tools | Rectangle, ellipse, line, arrow — all rendered with a hand-drawn aesthetic |
-| Object model | Each stroke/shape is an independent, selectable, movable, editable object |
+| Shape tools | Rectangle, ellipse, line, arrow, polygon, cloud — all rendered with a hand-drawn aesthetic |
+| Object model | Each stroke/shape is an independent, selectable, movable, rotatable, editable object |
 | Text tool | Place editable text on the canvas rendered in an xkcd-style handwriting font |
+| Image import | Import raster images (PNG, JPG) onto the canvas as selectable, movable, resizable objects |
 | Icon library | Searchable collection of pre-built doodle-style icons/graphics that can be placed on the canvas |
-| Styling controls | Stroke color, fill color, stroke width, opacity per object |
-| Selection and manipulation | Click to select, drag to move, handles to resize, multi-select |
+| Styling controls | Stroke color, fill color, stroke width, fill opacity, stroke opacity, hatched drop shadow with configurable angle |
+| Selection and manipulation | Click to select, drag to move, handles to resize, rotation handle, multi-select, copy/cut/paste, match size, alignment |
 | Undo/redo | Full undo/redo history for the session |
-| Export | Copy SVG to clipboard, download SVG file, copy as PNG |
+| Export | Copy SVG to clipboard, download SVG file, export as PNG, save/load as `.lumi` (ZIP) project file with embedded images |
 | Responsive web app | SPA optimized for desktop and tablet with pointer/touch input |
 | Open-source distribution | MIT-licensed codebase on GitHub |
 
@@ -86,8 +87,11 @@ There is a need for a lightweight, purpose-built drawing editor that produces cl
 | FR-8 | The system shall provide a rectangle shape tool | Must |
 | FR-9 | The system shall provide an ellipse/circle shape tool | Must |
 | FR-10 | The system shall provide a straight line tool | Must |
-| FR-11 | The system shall provide an arrow tool (line with arrowhead) | Must |
+| FR-11 | The system shall provide an arrow tool (line with arrowhead, adjustable arrowhead size) | Must |
+| FR-11a | Lines and arrows shall support bezier curve editing via a draggable midpoint handle | Must |
 | FR-12 | All shape tools shall render with the same sketchy/hand-drawn aesthetic as freehand strokes | Must |
+| FR-12a | The system shall provide a polygon tool — multi-click to place vertices, double-click to close, with post-creation vertex editing | Must |
+| FR-12b | The system shall provide a cloud shape tool with 3 top bumps (center tallest) and 3 bottom scallops | Must |
 | FR-13 | The system shall provide an eraser tool that removes entire objects on click/drag contact | Should |
 | FR-14 | The active tool shall be selectable via a toolbar and keyboard shortcuts | Must |
 
@@ -131,7 +135,11 @@ There is a need for a lightweight, purpose-built drawing editor that produces cl
 | FR-38 | Users shall be able to delete selected objects via keyboard (Delete/Backspace) | Must |
 | FR-39 | The system shall support multi-select via click+drag marquee or shift+click | Should |
 | FR-40 | The system shall support duplicating selected objects (Ctrl/Cmd+D) | Should |
+| FR-40a | The system shall support copy/cut/paste (Ctrl/Cmd+C/X/V) with incremental offset on successive pastes | Must |
 | FR-41 | The system shall support changing the z-order of objects (bring forward, send backward) | Should |
+| FR-41a | The system shall support rotating objects via a rotation handle (with 45° angle snapping) | Must |
+| FR-41b | The system shall support importing raster images (PNG, JPG) as canvas objects | Must |
+| FR-41c | When 2+ objects are selected, the system shall offer match width/height/size and alignment/equispacing actions | Should |
 
 ### 6.6 Styling
 
@@ -141,7 +149,11 @@ There is a need for a lightweight, purpose-built drawing editor that produces cl
 | FR-43 | The system shall allow setting fill color (including transparent/none) for shapes, text, and icons | Must |
 | FR-44 | The system shall allow adjusting stroke width | Must |
 | FR-45 | The system shall provide a color picker with preset palette and custom hex/RGB input | Must |
-| FR-46 | The system shall allow adjusting object opacity | Should |
+| FR-46 | The system shall allow adjusting fill opacity (independent from stroke opacity) | Should |
+| FR-46a | The system shall allow adjusting stroke opacity independently from fill opacity | Should |
+| FR-46b | The system shall support hatched drop shadows on filled shapes (rectangle, ellipse, polygon, cloud) with configurable offset and angle | Should |
+| FR-46c | Shadow opacity shall track fill opacity using a cubic curve (fades faster than fill) | Should |
+| FR-46d | Shadow direction shall remain fixed in world space regardless of object rotation | Should |
 | FR-47 | Style changes on a selected object shall update the canvas in real time | Must |
 | FR-48 | The system shall remember the last-used style settings for new objects | Should |
 
@@ -170,9 +182,10 @@ There is a need for a lightweight, purpose-built drawing editor that produces cl
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| FR-60 | The system shall auto-save the current drawing to browser local storage | Should |
+| FR-60 | The system shall auto-save the current drawing to browser local storage (including images as base64) | Should |
 | FR-61 | The system shall restore the last drawing on page reload | Should |
-| FR-62 | The system shall allow saving/loading drawings as a JSON project file | Should |
+| FR-62 | The system shall allow saving/loading drawings as `.lumi` project files (ZIP format with embedded images) | Should |
+| FR-62a | The system shall prompt for a project name on save and display it on the canvas | Should |
 | FR-63 | The system shall provide a "New Drawing" action that clears the canvas (with confirmation if unsaved) | Must |
 
 ### 6.10 User Interface
@@ -275,17 +288,30 @@ Only selected objects exported → Paste into target
 
 ## 11. Release Plan
 
-| Phase | Milestone | Scope |
-|-------|-----------|-------|
-| **v0.1 — MVP** | Basic drawing | Canvas with pen tool, sketchy rendering, single-color strokes, SVG copy to clipboard |
-| **v0.2 — Shapes** | Shape tools | Rectangle, ellipse, line, arrow tools with sketchy rendering |
-| **v0.3 — Text** | Text tool | Text placement with xkcd-style handwriting font, inline editing, font embedding on export |
-| **v0.4 — Icons** | Icon library | Searchable collection of doodle-style icons, category browsing, drag-to-canvas placement |
-| **v0.5 — Objects** | Object manipulation | Selection, move, resize, delete, multi-select, z-order |
-| **v0.6 — Styling** | Full styling | Color picker, fill, stroke width, opacity, preset palettes |
-| **v0.7 — Persistence** | Save/load | Local storage auto-save, JSON project file import/export |
-| **v0.8 — Polish** | Full experience | Dark mode, PNG export, undo/redo, keyboard shortcuts, grid toggle |
-| **v1.0 — Launch** | Public release | Performance tuning, documentation, PWA support, community launch |
+| Phase | Milestone | Scope | Status |
+|-------|-----------|-------|--------|
+| **v0.1 — MVP** | Basic drawing | Canvas with pen tool, sketchy rendering, single-color strokes, SVG copy to clipboard | Done |
+| **v0.2 — Shapes** | Shape tools | Rectangle, ellipse, line, arrow tools with sketchy rendering | Done |
+| **v0.3 — Text** | Text tool | Text placement with xkcd-style handwriting font, inline editing, font embedding on export | Done |
+| **v0.4 — Icons** | Icon library | Searchable collection of doodle-style icons, category browsing, drag-to-canvas placement | Planned |
+| **v0.5 — Objects** | Object manipulation | Selection, move, resize, delete, multi-select, copy/cut/paste, z-order | Done |
+| **v0.6 — Styling** | Full styling | Color picker, fill, stroke width, opacity, preset palettes, match size, alignment/equispacing | Done |
+| **v0.7 — Persistence** | Save/load | Local storage auto-save, JSON project file import/export | Done |
+| **v0.8 — Polish** | UX refinements | Undo/redo, select all, curved lines/arrows, draggable arrowhead size, fill opacity (not stroke) | Done |
+| **v0.9 — Export** | Export & deploy | PNG export, download SVG, canvas grid, zoom indicator, shortcut hints | Done |
+| **v0.9.1** | Hatched drop shadow | Hatched drop shadows for shapes with adjustable offset | Done |
+| **v0.9.2** | Testing & CI | Vitest unit tests, Playwright E2E, GitHub Actions CI, Cloudflare Pages deploy | Done |
+| **v0.9.3** | Mobile actions | Undo/redo/select-all/delete buttons in toolbar | Done |
+| **v0.9.4** | Image import | Import raster images, ZIP save/load when images present | Done |
+| **v0.9.5** | Project name | `.lumi` file extension, project name display and persistence | Done |
+| **v0.9.6** | Polygon tool | Multi-click polygon with vertex editing, fill, shadow support | Done |
+| **v0.9.7** | Object rotation | Rotation handle on all object types, SVG export, rotated resize | Done |
+| **v0.9.8** | Shadow angle | Configurable shadow angle, rotation-independent shadow direction and hatch | Done |
+| **v0.9.9** | Shadow opacity | Shadow opacity tracks fill opacity via cubic curve | Done |
+| **v0.9.10** | Pen stroke width | Stroke width scales pen thickness via perfect-freehand size parameter | Done |
+| **v0.9.11** | Cloud shape | Cloud tool with 3 top bumps, 3 bottom scallops, fill/shadow support | Done |
+| **v0.9.12** | Stroke opacity | Independent stroke opacity control, separate from fill opacity | Done |
+| **v1.0 — Launch** | Public release | Performance tuning, documentation, community launch | Planned |
 
 ## 12. Success Criteria
 

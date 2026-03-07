@@ -216,7 +216,7 @@
 ## v0.9.11 — Cloud Shape Tool `done`
 
 - [x] Cloud shape tool — click-drag to draw (like rectangle/ellipse)
-- [x] Sketchy cloud rendering via roughjs `generator.path()` with cubic bezier curves (3 bumps top, rounded sides, flat bottom)
+- [x] Sketchy cloud rendering via roughjs `generator.path()` with cubic bezier curves (3 bumps top, rounded sides, 3 scalloped bottom bumps)
 - [x] Separate clean outline path for fill/shadow clip (roughjs output only used for stroke)
 - [x] Path scales proportionally with width/height for natural resize behavior
 - [x] Fill color, opacity, and hatched drop shadow support
