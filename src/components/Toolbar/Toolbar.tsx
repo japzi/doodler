@@ -97,7 +97,8 @@ export function Toolbar() {
       await importProject(file)
       setToast('Drawing loaded!')
       setTimeout(() => setToast(null), 2000)
-    } catch {
+    } catch (err) {
+      console.error('Load failed:', err)
       setToast('Failed to load file')
       setTimeout(() => setToast(null), 2000)
     }

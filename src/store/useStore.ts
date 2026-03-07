@@ -111,7 +111,8 @@ export async function exportProject() {
 }
 
 export async function importProject(file: File): Promise<void> {
-  if (file.name.endsWith('.zip')) {
+  const isZip = file.name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed'
+  if (isZip) {
     const zip = await JSZip.loadAsync(file)
     const projectFile = zip.file('project.json')
     if (!projectFile) throw new Error('Invalid ZIP: no project.json')
@@ -121,7 +122,7 @@ export async function importProject(file: File): Promise<void> {
 
     // Restore image src fields from ZIP image files
     const srcMapping = new Map<string, string>()
-    const imageFiles = Object.keys(zip.files).filter((f) => f.startsWith('images/'))
+    const imageFiles = Object.keys(zip.files).filter((f) => f.startsWith('images/') && !zip.files[f].dir)
     for (const path of imageFiles) {
       const imgData = await zip.file(path)!.async('uint8array')
       const ext = path.split('.').pop() ?? 'png'
